@@ -288,7 +288,7 @@ export const createPost = async (request, response) => {
       contents: contentIds,
       caption,
       space: spaceId,
-      locationTag: addingLocationTag._id,
+      locationTag: addingLocationTag ? addingLocationTag._id : null,
       createdBy,
       createdAt,
     });

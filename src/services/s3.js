@@ -15,7 +15,14 @@ export const uploadPhoto = async (fileName, contentType) => {
   const filePath = path.join(__dirname, 'buffer', fileName);
   const fileStream = fs.createReadStream(filePath);
 
-  const Key = contentType === 'icon' ? `icons/${fileName}` : 'photo' ? `photos/${fileName}` : `videos/${fileName}`;
+  let Key;
+  if (contentType === 'icon') {
+    Key = `icons/${fileName}`;
+  } else if (contentType === 'photo') {
+    Key = `photos/${fileName}`;
+  } else if (contentType === 'video') {
+    Key = `videos/${fileName}`;
+  }
 
   const uploadParams = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
