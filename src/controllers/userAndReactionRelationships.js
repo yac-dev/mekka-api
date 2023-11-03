@@ -1,5 +1,6 @@
 import UserAndReactionRelationship from '../models/userAndReactionRelationships';
 import ReactionStatus from '../models/reactionStatus';
+import Post from '../models/post';
 
 export const createReaction = async (request, response) => {
   try {
@@ -19,6 +20,10 @@ export const createReaction = async (request, response) => {
     const reactionStatus = await ReactionStatus.findOne({ reaction: reactionId });
     reactionStatus.count++;
     reactionStatus.save();
+
+    const post = await Post.findById(postId);
+    post.totalReactions++;
+    post.save();
 
     response.status(200).json({
       reactionStatus,

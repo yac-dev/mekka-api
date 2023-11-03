@@ -15,6 +15,8 @@ const postSchema = mongoose.Schema({
   space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
   createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
   createdAt: Date,
+  totalComments: Number,
+  totalReactions: Number,
   // disappearAt: Date, // もしくはnull
 
   // tags: [{ type: mongoose.Schema.ObjectId, ref: 'Tag' }],
