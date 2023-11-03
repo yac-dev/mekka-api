@@ -243,128 +243,146 @@ export const createPost = async (request, response) => {
 
     // 1 contentsを作る。
     // batch creation
-    const contentPromises = files.map(async (file) => {
-      const content = await Content.create({
-        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-          file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
-        }/${file.filename}`,
-        type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
-        createdBy,
-        createdAt,
-      });
-      contentIds.push(content._id);
-      await uploadPhoto(file.filename, content.type);
-      return content;
-    });
-    const contentDocuments = await Promise.all(contentPromises);
+    // そっか、これあれだわな。。。fileで作っちゃっているからdurationをつけようがないよな。。
+    // -----------------
+    // const contentPromises = files.map(async (file) => {
+    //   const content = await Content.create({
+    //     data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
+    //       file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
+    //     }/${file.filename}`,
+    //     type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
+    //     duration: file.mimetype === 'image/jpeg' ? null : duration,
+    //     createdBy,
+    //     createdAt,
+    //   });
+    //   contentIds.push(content._id);
+    //   await uploadPhoto(file.filename, content.type);
+    //   return content;
+    // });
+    // const contentDocuments = await Promise.all(contentPromises);
 
-    // 2,postを作る
-    let locationTag;
-    if (createdLocationTag) {
-      locationTag = await LocationTag.create({
-        iconType: parsedCreatedLocationTag.iconType,
-        icon: parsedCreatedLocationTag.icon,
-        image: parsedCreatedLocationTag.image,
-        name: parsedCreatedLocationTag.name,
-        point: parsedCreatedLocationTag.point,
-        color: parsedCreatedLocationTag.color,
-        space: spaceId,
-        createdBy: createdBy,
-      });
-    }
+    // // 2,postを作る
+    // let locationTag;
+    // if (createdLocationTag) {
+    //   locationTag = await LocationTag.create({
+    //     iconType: parsedCreatedLocationTag.iconType,
+    //     icon: parsedCreatedLocationTag.icon,
+    //     image: parsedCreatedLocationTag.image,
+    //     name: parsedCreatedLocationTag.name,
+    //     point: parsedCreatedLocationTag.point,
+    //     color: parsedCreatedLocationTag.color,
+    //     space: spaceId,
+    //     createdBy: createdBy,
+    //   });
+    // }
 
-    let addingLocationTag;
-    if (createdLocationTag) {
-      addingLocationTag = createdLocationTag;
-    } else if (addedLocationTag) {
-      addingLocationTag = addedLocationTag;
-    } else {
-      addingLocationTag = null;
-    }
+    // let addingLocationTag;
+    // if (createdLocationTag) {
+    //   addingLocationTag = createdLocationTag;
+    // } else if (addedLocationTag) {
+    //   addingLocationTag = addedLocationTag;
+    // } else {
+    //   addingLocationTag = null;
+    // }
 
-    console.log(addingLocationTag);
+    // console.log(addingLocationTag);
 
-    const post = await Post.create({
-      contents: contentIds,
-      caption,
-      space: spaceId,
-      locationTag: addingLocationTag ? addingLocationTag._id : null,
-      createdBy,
-      createdAt,
-    });
+    // const post = await Post.create({
+    //   contents: contentIds,
+    //   caption,
+    //   space: spaceId,
+    //   locationTag: addingLocationTag ? addingLocationTag._id : null,
+    //   createdBy,
+    //   createdAt,
+    // });
 
-    // 3 reactionのstatusを作る。
-    const reacionStatusObjects = parsedReactions.map((reactionId) => {
-      return {
-        post: post._id,
-        reaction: reactionId,
-        count: 0,
-      };
-    });
-    const reactionAndStatuses = await ReactionStatus.insertMany(reacionStatusObjects);
+    // // 3 reactionのstatusを作る。
+    // const reacionStatusObjects = parsedReactions.map((reactionId) => {
+    //   return {
+    //     post: post._id,
+    //     reaction: reactionId,
+    //     count: 0,
+    //   };
+    // });
+    // const reactionAndStatuses = await ReactionStatus.insertMany(reacionStatusObjects);
 
-    const tagIds = [];
+    // const tagIds = [];
 
-    // 4 新しいtagを作る、もし、createdTagsがあったら。
-    if (parsedCreatedTags.length) {
-      const tagObjects = parsedCreatedTags.map((tag) => {
-        return {
-          iconType: tag.iconType,
-          icon: tag.icon,
-          color: tag.color,
-          image: tag.image,
-          name: tag.name,
-          count: 1,
-          space: spaceId,
-          createdBy: createdBy,
-          updatedAt: new Date(),
-        };
-      });
-      const tagDocuments = await Tag.insertMany(tagObjects);
-      tagDocuments.forEach((tagDocument) => {
-        tagIds.push(tagDocument._id);
-      });
-    }
+    // // 4 新しいtagを作る、もし、createdTagsがあったら。
+    // let createdTagDocuments;
+    // if (parsedCreatedTags.length) {
+    //   const tagObjects = parsedCreatedTags.map((tag) => {
+    //     return {
+    //       iconType: tag.iconType,
+    //       icon: tag.icon,
+    //       color: tag.color,
+    //       image: tag.image,
+    //       name: tag.name,
+    //       count: 1,
+    //       space: spaceId,
+    //       createdBy: createdBy,
+    //       updatedAt: new Date(),
+    //     };
+    //   });
+    //   createdTagDocuments = await Tag.insertMany(tagObjects);
+    //   createdTagDocuments.forEach((tagDocument) => {
+    //     tagIds.push(tagDocument._id);
+    //   });
+    // }
 
-    // だから、client側ではtagのidだけを入れておく感じな。
-    if (parsedTags.length) {
-      // parsedTags
-      const tags = await Tag.find({ _id: { $in: parsedTags } });
-      const updatePromises = tags.map((tag) => {
-        tag.count += 1;
-        tag.updatedAt = new Date();
-        return tag.save();
-      });
+    // let addedExistingTags;
+    // // だから、client側ではtagのidだけを入れておく感じな。
+    // if (parsedTags.length) {
+    //   // parsedTags
+    //   const tags = await Tag.find({ _id: { $in: parsedTags } });
+    //   const updatePromises = tags.map((tag) => {
+    //     tag.count += 1;
+    //     tag.updatedAt = new Date();
+    //     return tag.save();
+    //   });
 
-      // Execute all update promises in parallel
-      await Promise.all(updatePromises);
-      tagIds.push(...parsedTags);
-      // parsedTags.forEach((tagId) => {
-      //   tagIds.push(tagId);
-      // });
-    }
+    //   // Execute all update promises in parallel
+    //   await Promise.all(updatePromises);
+    //   tagIds.push(...parsedTags);
+    //   // parsedTags.forEach((tagId) => {
+    //   //   tagIds.push(tagId);
+    //   // });
+    // }
 
-    // tagIdsをもとにpostAndTagのrelationshipを作る、もちろん最終的にtagIdsのlengthがあったらね。
-    // 最終的に、つけられたtagとpostのrelationshipを作る。
-    if (tagIds.length) {
-      const postAndTagRelationshipObjects = tagIds.map((tagId) => {
-        return {
-          post: post._id,
-          tag: tagId,
-        };
-      });
+    // // tagIdsをもとにpostAndTagのrelationshipを作る、もちろん最終的にtagIdsのlengthがあったらね。
+    // // 最終的に、つけられたtagとpostのrelationshipを作る。
+    // if (tagIds.length) {
+    //   const postAndTagRelationshipObjects = tagIds.map((tagId) => {
+    //     return {
+    //       post: post._id,
+    //       tag: tagId,
+    //     };
+    //   });
 
-      const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
-    }
+    //   const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
+    // }
+
+    // response.status(201).json({
+    //   post: {
+    //     _id: post._id,
+    //     contents: contentDocuments,
+    //     caption: post.caption,
+    //     space: spaceId,
+    //     locationTag: addingLocationTag ? addingLocationTag._id : null,
+    //     createdBy: post.createdBy,
+    //     createdAt: post.createdAt,
+    //     // content: {
+    //     //   data: contents[0].data,
+    //     //   type: contents[0].type,
+    //     // },
+    //   },
+    //   addedTags: [...parsedTags],
+    //   createdTags: createdTagDocuments,
+    // });
+    // ---------------------
 
     response.status(201).json({
-      post: {
-        _id: post._id,
-        // content: {
-        //   data: contents[0].data,
-        //   type: contents[0].type,
-        // },
-      },
+      message: 'success',
     });
   } catch (error) {
     console.log(error);

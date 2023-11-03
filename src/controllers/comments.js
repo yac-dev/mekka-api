@@ -10,9 +10,9 @@ export const createComment = async (request, response) => {
       createdAt: new Date(),
     });
 
-    // const post = await Post.find({ _id: request.body.postId });
-    // post.totalComments++;
-    // post.save();
+    const post = await Post.find({ _id: request.body.postId });
+    post.totalComments++;
+    post.save();
 
     response.status(201).json({
       comment,
