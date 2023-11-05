@@ -10,7 +10,7 @@ import {
   getCommentsByPostId,
 } from '../controllers/posts';
 
-router.route('/').post(multerParser.array('contents', 10), createPost);
+router.route('/').post(multerParser.array('bufferContents', 10), createPost);
 router.route('/:postId').get(getPost);
 router.route('/:postId/comments').get(getCommentsByPostId);
 router.route('/tag/:tagId').get(getPostsByTagId);

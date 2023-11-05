@@ -8,6 +8,8 @@ import LocationTag from '../models/locationTag';
 import PostAndTagRelationship from '../models/postAndTagRelationship';
 import { uploadPhoto } from '../services/s3';
 import mongoose from 'mongoose';
+import path from 'path';
+import sharp from 'sharp';
 
 // post時に何をするかだね。
 // transaction, atomicityの実装。atlasで使えるのかな？？
@@ -207,18 +209,53 @@ import mongoose from 'mongoose';
 //     session.endSession();
 //   }
 // };
+
+const sharpImage = async (inputFileName) => {
+  const __dirname = path.resolve();
+  const fileInput = path.join(__dirname, 'buffer', inputFileName);
+  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
+  const outputPath = path.join(__dirname, 'buffer', outputFileName);
+  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
+  const processed = await sharp(fileInput)
+    .webp({ quality: 1 })
+    // .toFile(outputPath)
+    .toBuffer((err, data) => console.log(data));
+  return processed;
+};
+
+const optimizeVideo = (inputFileName) => {
+  const __dirname = path.resolve();
+  const inputFilePath = path.join(__dirname, 'buffer', inputFileName);
+  const outputFileName = `optimized-${inputFileName}`;
+  const outputFilePath = path.join(__dirname, 'buffer', outputFileName);
+  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v 1500k -acodec mp3 ${outputFilePath}`;
+  return new Promise((resolve, reject) => {
+    exec(command, (err, stdout, stderr) => {
+      if (err) console.log('Error ', err);
+      else {
+        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
+        resolve(outputFilePath);
+      }
+    });
+  });
+};
+
+// photo postと、video postで、場合わけをしないといけないな。。。
+// videoの場合は、ffmpeg通さないといけないから。
 export const createPost = async (request, response) => {
   try {
     // postで、reactionを全部持っておかないとね。
-    const { caption, createdBy, spaceId, reactions, addedTags, createdTags, createdLocationTag, addedLocationTag } =
-      request.body;
-    console.log('createdBy', createdBy);
-    console.log('created tags', createdTags);
-    console.log('added tags', addedTags);
-    console.log('created locationtag', createdLocationTag);
-    console.log('added location tag', addedLocationTag);
-
-    // const disappearAt = new Date(new Date().getTime() + Number(disappearAfter) * 60 * 1000);
+    const {
+      caption,
+      createdBy,
+      spaceId,
+      reactions,
+      addedTags,
+      createdTags,
+      createdLocationTag,
+      addedLocationTag,
+      contents,
+    } = request.body;
     // 現在の時間にdissaperAfter(minute)を足した日時を出す。
     // const parsedLocation = JSON.parse(location);
     const parsedReactions = JSON.parse(reactions);
@@ -228,7 +265,8 @@ export const createPost = async (request, response) => {
     const files = request.files;
     const createdAt = new Date();
     const contentIds = [];
-    const contents = [];
+    // const contents = [];
+    console.log('these are contents ', JSON.parse(contents));
     let parsedCreatedLocationTag;
     if (createdLocationTag) {
       parsedCreatedLocationTag = JSON.parse(createdLocationTag);
@@ -237,28 +275,57 @@ export const createPost = async (request, response) => {
     if (addedLocationTag) {
       parsedAddedLocationTag = JSON.parse(addedLocationTag);
     }
+    console.log('request body from  ', request.body);
 
-    console.log(parsedCreatedLocationTag);
-    console.log(parsedAddedLocationTag);
+    // console.log(parsedCreatedLocationTag);
+    // console.log(parsedAddedLocationTag);
+    // console.log(request);
+
+    // まあ、一応動く。ただ、icon upload部分の動きも変わっちゃっている。そこを直さないといいかん。
+    const contentPromises = JSON.parse(contents).map(async (contentObject) => {
+      const fileName = `${contentObject.fileName.split('.')[0]}.webp`;
+      const content = await Content.create({
+        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
+          contentObject.type === 'photo' ? 'photos' : 'videos'
+        }/${fileName}`,
+        type: contentObject.type,
+        duration: contentObject.duration,
+        createdBy,
+        createdAt,
+      });
+      contentIds.push(content._id);
+      // // ここでsharpしてoutputする必要があって、そのoutputをawsにあげるっていう流れだよな。
+      // await uploadPhoto(content.fileName, content.type);
+      // return content;
+      // ここで場合わけをするか。photoかvideoか。
+      if (contentObject.type === 'photo') {
+        const sharpedImageBinary = await sharpImage(contentObject.fileName);
+        await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
+        return content;
+      } else if (contentObject.type === 'video') {
+        // ffmpegを通して、awsにuploadする。
+        const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v 1500k -acodec mp3 ${outputFilePath}`;
+      }
+    });
 
     // 1 contentsを作る。
     // batch creation
     // そっか、これあれだわな。。。fileで作っちゃっているからdurationをつけようがないよな。。
     // -----------------
-    const contentPromises = files.map(async (file) => {
-      const content = await Content.create({
-        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-          file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
-        }/${file.filename}`,
-        type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
-        duration: file.mimetype === 'image/jpeg' ? null : duration,
-        createdBy,
-        createdAt,
-      });
-      contentIds.push(content._id);
-      await uploadPhoto(file.filename, content.type);
-      return content;
-    });
+    // const contentPromises = files.map(async (file) => {
+    //   const content = await Content.create({
+    //     data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
+    //       file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
+    //     }/${file.filename}`,
+    //     type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
+    //     duration: file.mimetype === 'image/jpeg' ? null : duration,
+    //     createdBy,
+    //     createdAt,
+    //   });
+    //   contentIds.push(content._id);
+    //   await uploadPhoto(file.filename, content.type);
+    //   return content;
+    // });
     const contentDocuments = await Promise.all(contentPromises);
 
     // 2,postを作る
