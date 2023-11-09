@@ -71,3 +71,14 @@ export const login = async (request, response) => {
     });
   }
 };
+
+export const deleteMe = async (request, response) => {
+  try {
+    const user = await User.findByIdAndRemove(request.params.userId);
+    response.status(204).json({
+      message: 'resource deleted successfully',
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
