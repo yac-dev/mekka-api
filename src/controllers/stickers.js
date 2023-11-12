@@ -61,7 +61,7 @@ export const createStickerPreview = async (request, response) => {
   try {
     // 今回はfile deleteね。
     if (request.body.exFileName) {
-      await unlinkFile(path.join(__dirname, '..', '..', 'buffer', `removed-${request.body.exFileName}.png`));
+      await unlinkFile(path.join(__dirname, '..', '..', 'buffer', `removed-${request.body.exFileName}`));
     }
     const inpuFilePath = path.join(__dirname, '..', '..', 'buffer', request.file.filename);
     const res1 = await executeRemoveBg(inpuFilePath, request.file.filename);
@@ -76,7 +76,7 @@ export const createStickerPreview = async (request, response) => {
 export const deleteStickerPreview = async (request, response) => {
   try {
     console.log(request.body);
-    await unlinkFile(path.join(__dirname, '..', '..', 'buffer', `removed-${request.body.fileName}.png`));
+    await unlinkFile(path.join(__dirname, '..', '..', 'buffer', `removed-${request.body.fileName}`));
     response.status(200).json({
       message: 'success',
     });
@@ -87,19 +87,19 @@ export const deleteStickerPreview = async (request, response) => {
 
 export const createSticker = async (request, response) => {
   try {
-    const imagePath = path.join(__dirname, '..', '..', 'buffer', `removed-${request.body.fileName}.png`);
+    const imagePath = path.join(__dirname, '..', '..', 'buffer', `removed-${request.body.fileName}`);
     const fileStream = fs.createReadStream(imagePath);
 
     const uploadParams = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Body: fileStream,
-      Key: `stickers/removed-${request.body.fileName}.png`,
+      Key: `stickers/removed-${request.body.fileName}`,
     };
     await s3.upload(uploadParams).promise();
     await unlinkFile(imagePath);
     const sticker = await Sticker.create({
-      url: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/stickers/removed-${request.body.fileName}.png`,
-      name: `removed-${request.body.fileName}.png`,
+      url: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/stickers/removed-${request.body.fileName}`,
+      name: `removed-${request.body.fileName}`,
       createdBy: request.body.userId,
     });
     response.status(200).json({

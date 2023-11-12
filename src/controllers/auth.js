@@ -5,9 +5,13 @@ import bcrypt from 'bcrypt';
 export const signup = async (request, response) => {
   try {
     const { name, email, password } = request.body;
-    if (password.length < 10) {
-      return next(new AppError('Password has to be at least 10 characters long.', 400, 'PasswordLengthError'));
-    }
+    // if (password.length < 10) {
+    //   return next(new AppError('Password has to be at least 10 characters long.', 400, 'PasswordLengthError'));
+    // }
+    // const alreadyExistUser = await User.findOne({ email });
+    // if (alreadyExistUser) {
+    //   throw new Error('Already exists');
+    // }
     const randomAvatarNumber = Math.floor(Math.random() * 24) + 1;
     const user = new User({
       name,
@@ -24,11 +28,18 @@ export const signup = async (request, response) => {
 
     const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
     response.status(201).json({
-      user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar },
-      jwt: jwtToken,
+      status: 'success',
+      data: {
+        user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar },
+        jwt: jwtToken,
+      },
     });
   } catch (error) {
     console.log(error);
+    response.status(400).json({
+      status: 'error',
+      data: error,
+    });
   }
 };
 
