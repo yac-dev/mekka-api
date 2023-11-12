@@ -34,3 +34,19 @@ export const uploadPhoto = async (originalFileName, outputFileName, contentType,
 
   await unlinkFile(originalFilePath);
 };
+
+export const uploadIcon = async (fileName) => {
+  const __dirname = path.resolve();
+  const originalFilePath = path.join(__dirname, 'buffer', fileName);
+  const fileStream = fs.createReadStream(originalFilePath);
+
+  const uploadParams = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Body: fileStream,
+    Key: `icons/${fileName}`,
+  };
+
+  await s3.upload(uploadParams).promise();
+
+  await unlinkFile(originalFilePath);
+};

@@ -1,7 +1,7 @@
 import Space from '../models/space';
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship';
 import Reaction from '../models/reaction';
-import { uploadPhoto } from '../services/s3';
+import { uploadPhoto, uploadIcon } from '../services/s3';
 import Post from '../models/post';
 import Tag from '../models/tag';
 import PostAndTagRelationship from '../models/postAndTagRelationship';
@@ -93,7 +93,7 @@ export const createSpace = async (request, response) => {
       createdAt: new Date(),
     });
     space.save();
-    await uploadPhoto(request.file.filename, 'icon');
+    await uploadIcon(request.file.filename);
 
     // tagを作るだけでいいのかね。もしかしたら。
     // tagの数は、結構多くの数になる。spaceが全部持っておくのはベストではないだろう。それよりも、他にdelegateする方がいい。

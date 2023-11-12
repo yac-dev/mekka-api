@@ -25,7 +25,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/buffer/customemojis', express.static(path.join(__dirname, '..', 'buffer')));
+app.use('/buffer', express.static(path.join(__dirname, '..', 'buffer')));
 
 app.get('/', (request, response) => {
   response.send('Hello guest');
