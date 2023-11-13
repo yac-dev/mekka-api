@@ -458,7 +458,7 @@ export const createPost = async (request, response) => {
         // },
       },
       addedTags: [...parsedTags],
-      createdTags: createdTagDocuments,
+      createdTags: createdTagDocuments ? createdTagDocuments : null,
     });
     // ---------------------
   } catch (error) {
@@ -513,6 +513,7 @@ export const getPostsByTagId = async (request, response) => {
           { path: 'createdBy', model: 'User', select: '_id name avatar' },
         ],
       });
+    console.log(postAndTagRelationships);
 
     const posts = postAndTagRelationships
       .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
