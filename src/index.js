@@ -1,8 +1,25 @@
 import http from 'http';
 import app from './app';
+import mongoose from 'mongoose';
 
-const server = http.createServer(app);
+// const server = http.createServer(app);
 
-server.listen(3500, () => {
-  console.log('listening on port 3500');
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
+  }
+};
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log('listening for requests');
+  });
 });
+
+// server.listen(3500, () => {
+//   console.log('listening on port 3500');
+// });
