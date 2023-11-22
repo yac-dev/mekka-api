@@ -6,7 +6,10 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.log(error);
@@ -15,7 +18,7 @@ const connectDB = async () => {
 };
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  app.listen(3500, () => {
     console.log('listening for requests');
   });
 });
