@@ -231,7 +231,7 @@ const optimizeVideo = (originalFileName, newFileName) => {
   const __dirname = path.resolve();
   const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
   const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v 1500k -acodec mp3 ${outputFilePath}`;
+  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
   return new Promise((resolve, reject) => {
     exec(command, (err, stdout, stderr) => {
       if (err) console.log('Error ', err);
