@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-// import './databases/mongoose';
+import './databases/mongoose';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
