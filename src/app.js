@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import './databases/mongoose';
+import './databases/mongoose.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,18 +8,18 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import authRouter from './routers/auth';
-import spacesRouter from './routers/spaces';
-import postsRouter from './routers/posts';
-import momentsRouter from './routers/moments';
-import reactionStatusesRouter from './routers/reactionStatuses';
-import stickersRouter from './routers/stickers';
-import commentsRouter from './routers/comments';
-import tagsRouter from './routers/tags';
-import usersRouter from './routers/users';
-import postAndTagRelationshipsRouter from './routers/postAndTagRelationship';
-import userAndReactionRelationshipsRouter from './routers/userAndReactionRelationships';
-import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships';
+import authRouter from './routers/auth.js';
+import spacesRouter from './routers/spaces.js';
+import postsRouter from './routers/posts.js';
+import momentsRouter from './routers/moments.js';
+import reactionStatusesRouter from './routers/reactionStatuses.js';
+import stickersRouter from './routers/stickers.js';
+import commentsRouter from './routers/comments.js';
+import tagsRouter from './routers/tags.js';
+import usersRouter from './routers/users.js';
+import postAndTagRelationshipsRouter from './routers/postAndTagRelationship.js';
+import userAndReactionRelationshipsRouter from './routers/userAndReactionRelationships.js';
+import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships.js';
 
 const app = express();
 app.use(cors());

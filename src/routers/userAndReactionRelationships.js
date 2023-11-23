@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import { createReaction, getUserReactions } from '../controllers/userAndReactionRelationships';
+import { createReaction, getUserReactions } from '../controllers/userAndReactionRelationships.js';
 
 router.route('/user/:userId/post/:postId').post(createReaction);
 router.route('/post/:postId').get(getUserReactions);

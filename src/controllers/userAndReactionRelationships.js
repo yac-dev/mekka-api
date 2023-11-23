@@ -1,6 +1,6 @@
-import UserAndReactionRelationship from '../models/userAndReactionRelationships';
-import ReactionStatus from '../models/reactionStatus';
-import Post from '../models/post';
+import UserAndReactionRelationship from '../models/userAndReactionRelationships.js';
+import ReactionStatus from '../models/reactionStatus.js';
+import Post from '../models/post.js';
 
 export const createReaction = async (request, response) => {
   try {

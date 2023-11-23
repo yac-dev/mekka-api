@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
-import { signup, loadMe, login, deleteMe } from '../controllers/auth';
-import { authorization } from '../middlewares/authorization';
+import { signup, loadMe, login, deleteMe } from '../controllers/auth.js';
+import { authorization } from '../middlewares/authorization.js';
 
 router.route('/signup').post(signup);
 router.route('/login').post(login);

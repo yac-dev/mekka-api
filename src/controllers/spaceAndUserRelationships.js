@@ -1,5 +1,4 @@
-import SpaceAndUserRelationship from '../models/spaceAndUserRelationship';
-import Reaction from '../models/reaction';
+import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 
 export const getMySpaces = async (request, response) => {
   try {

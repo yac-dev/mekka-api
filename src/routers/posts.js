@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import multerParser from '../middlewares/multer';
+import multerParser from '../middlewares/multer.js';
 import {
   createPost,
   getPost,
@@ -8,7 +8,7 @@ import {
   getPostsByUserId,
   getPostsByLocationTagId,
   getCommentsByPostId,
-} from '../controllers/posts';
+} from '../controllers/posts.js';
 
 router.route('/').post(multerParser.array('bufferContents', 10), createPost);
 router.route('/:postId').get(getPost);
