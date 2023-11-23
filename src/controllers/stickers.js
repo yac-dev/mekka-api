@@ -1,5 +1,5 @@
 import Sticker from '../models/sticker.js';
-import S3 from 'aws-sdk/clients/s3';
+import S3 from 'aws-sdk/clients/s3.js';
 import path from 'path';
 import axios from 'axios';
 import FormData from 'form-data';
