@@ -1,7 +1,7 @@
-import Moment from '../models/moment';
-import Content from '../models/content';
+import Moment from '../models/moment.js';
+import Content from '../models/content.js';
 import mongoose from 'mongoose';
-import { uploadPhoto } from '../services/s3';
+import { uploadPhoto } from '../services/s3.js';
 
 export const createMoment = async (request, response) => {
   const session = await mongoose.startSession();

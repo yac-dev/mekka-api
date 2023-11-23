@@ -1,4 +1,4 @@
-import SpaceAndUserRelationship from '../models/spaceAndUserRelationship';
+import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 
 export const getUsersBySpaceId = async (request, response) => {
   try {

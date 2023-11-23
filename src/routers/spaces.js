@@ -11,8 +11,8 @@ import {
   getPeopleBySpaceId,
   joinPrivateSpaceBySecretKey,
   joinPublicSpace,
-} from '../controllers/spaces';
-import multerParser from '../middlewares/multer';
+} from '../controllers/spaces.js';
+import multerParser from '../middlewares/multer.js';
 
 router.route('/').post(multerParser.single('icon'), createSpace).get(getSpaces);
 router.route('/:spaceId').get(getSpaceById);

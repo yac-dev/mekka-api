@@ -1,5 +1,4 @@
-import Reaction from '../models/reaction';
-import ReactionStatus from '../models/reactionStatus';
+import ReactionStatus from '../models/reactionStatus.js';
 
 // ここ、後でtestしないとね。色々手動で消して。
 export const getReactionStatuses = async (request, response) => {

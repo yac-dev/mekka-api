@@ -1,4 +1,4 @@
-import Sticker from '../models/sticker';
+import Sticker from '../models/sticker.js';
 import S3 from 'aws-sdk/clients/s3';
 import path from 'path';
 import axios from 'axios';

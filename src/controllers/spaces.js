@@ -1,12 +1,10 @@
-import Space from '../models/space';
-import SpaceAndUserRelationship from '../models/spaceAndUserRelationship';
-import Reaction from '../models/reaction';
-import { uploadPhoto, uploadIcon } from '../services/s3';
-import Post from '../models/post';
-import Tag from '../models/tag';
-import PostAndTagRelationship from '../models/postAndTagRelationship';
-import SpaceAndTagAndPostRelationship from '../models/spaceAndTagAndPostRelationship';
-import LocationTag from '../models/locationTag';
+import Space from '../models/space.js';
+import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
+import Reaction from '../models/reaction.js';
+import { uploadPhoto, uploadIcon } from '../services/s3.js';
+import Post from '../models/post.js';
+import Tag from '../models/tag.js';
+import LocationTag from '../models/locationTag.js';
 import mongoose from 'mongoose';
 
 // space, reactions, spaceAndUserRel, tagを作る。ここのhandlerで。
