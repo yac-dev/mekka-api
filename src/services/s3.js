@@ -60,3 +60,22 @@ export const uploadIcon = async (fileName) => {
 
   await unlinkFile(originalFilePath);
 };
+
+export const uploadVideo = async (inputFileName, contentType, binaryData) => {
+  const __dirname = path.resolve();
+  const inputFilePath = path.join(__dirname, 'buffer', inputFileName);
+  const fileStream = fs.createReadStream(inputFilePath);
+
+  const uploadParams = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Body: fileStream,
+    Key: `videos/${inputFileName}`,
+  };
+  await new Upload({
+    client: s3,
+    params: uploadParams,
+  }).done();
+  console.log('content uploaded');
+
+  await unlinkFile(inputFilePath);
+};
