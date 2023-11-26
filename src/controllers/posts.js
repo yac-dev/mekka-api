@@ -6,7 +6,7 @@ import Comment from '../models/comment.js';
 import Tag from '../models/tag.js';
 import LocationTag from '../models/locationTag.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
-import { uploadPhoto } from '../services/s3.js';
+import { uploadPhoto, uploadVideo } from '../services/s3.js';
 import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs';
@@ -323,7 +323,10 @@ export const createPost = async (request, response) => {
       if (contentObject.type === 'photo') {
         fileName = `${contentObject.fileName.split('.')[0]}.webp`;
       } else if (contentObject.type === 'video') {
-        fileName = `optimized-${contentObject.fileName.split('.')[0]}.mp4`;
+        // --- ver1 ffmpeg通す時のやつ
+        // fileName = `optimized-${contentObject.fileName.split('.')[0]}.mp4`;
+        // -----
+        fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
       }
       const content = await Content.create({
         data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
@@ -344,14 +347,19 @@ export const createPost = async (request, response) => {
         await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
         return content;
       } else if (contentObject.type === 'video') {
+        // --- ver1
         // ffmpegを通して、
-        const outputFileName = `optimized-${contentObject.fileName}`;
-        const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, fileName);
-        const fileStream = fs.createReadStream(optimizedVideoFilePath);
-        // awsにuploadする。
-        await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-        await unlinkFile(optimizedVideoFilePath);
-        return content;
+        // const outputFileName = `optimized-${contentObject.fileName}`;
+        // const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, fileName);
+        // const fileStream = fs.createReadStream(optimizedVideoFilePath);
+        // // awsにuploadする。
+        // await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
+        // await unlinkFile(optimizedVideoFilePath);
+        // return content;
+        // ---
+
+        // ver2
+        await uploadVideo(contentObject.fileName);
       }
     });
 
