@@ -1,13 +1,17 @@
 import fs from 'fs';
 import util from 'util';
 const unlinkFile = util.promisify(fs.unlink);
-import S3 from 'aws-sdk/clients/s3';
+import { Upload } from '@aws-sdk/lib-storage';
+import { S3 } from '@aws-sdk/client-s3';
 import path from 'path';
 
 const s3 = new S3({
   region: process.env.AWS_S3_BUCKET_REGION,
-  accessKeyId: process.env.AWS_S3_BUCKET_ACCESS_KEY,
-  secretAccessKey: process.env.AWS_S3_BUCKET_SECRET_KEY,
+
+  credentials: {
+    accessKeyId: process.env.AWS_S3_BUCKET_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_S3_BUCKET_SECRET_KEY,
+  },
 });
 
 export const uploadPhoto = async (originalFileName, outputFileName, contentType, binaryData) => {
@@ -29,7 +33,10 @@ export const uploadPhoto = async (originalFileName, outputFileName, contentType,
     Body: binaryData,
     Key: Key,
   };
-  await s3.upload(uploadParams).promise();
+  await new Upload({
+    client: s3,
+    params: uploadParams,
+  }).done();
   console.log('content uploaded');
 
   await unlinkFile(originalFilePath);
@@ -46,7 +53,10 @@ export const uploadIcon = async (fileName) => {
     Key: `icons/${fileName}`,
   };
 
-  await s3.upload(uploadParams).promise();
+  await new Upload({
+    client: s3,
+    params: uploadParams,
+  }).done();
 
   await unlinkFile(originalFilePath);
 };
