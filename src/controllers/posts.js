@@ -12,6 +12,8 @@ import sharp from 'sharp';
 import fs from 'fs';
 import util from 'util';
 import { exec } from 'child_process';
+// const ffmpeg = require('fluent-ffmpeg');
+import ffmpeg from 'fluent-ffmpeg';
 const unlinkFile = util.promisify(fs.unlink);
 
 // post時に何をするかだね。
@@ -226,19 +228,51 @@ const sharpImage = async (inputFileName) => {
   return processed;
 };
 
+// const optimizeVideo = (originalFileName, newFileName) => {
+//   const compressOptions = {
+//     videoCodec: 'libx264', // 使用するビデオコーデック
+//     audioCodec: 'aac', // 使用するオーディオコーデック
+//     size: '990x540', // 出力動画の解像度
+//   };
+//   const __dirname = path.resolve();
+//   const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
+//   const outputFilePath = path.join(__dirname, 'buffer', newFileName);
+//   const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
+//   return new Promise((resolve, reject) => {
+//     exec(command, (err, stdout, stderr) => {
+//       if (err) console.log('Error ', err);
+//       else {
+//         // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
+//         resolve(outputFilePath);
+//       }
+//     });
+//   });
+// };
+
 const optimizeVideo = (originalFileName, newFileName) => {
+  const compressOptions = {
+    videoCodec: 'libx264', // 使用するビデオコーデック
+    audioCodec: 'aac', // 使用するオーディオコーデック
+    size: '540x990', // 出力動画の解像度
+  };
   const __dirname = path.resolve();
   const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
   const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
+  // const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
   return new Promise((resolve, reject) => {
-    exec(command, (err, stdout, stderr) => {
-      if (err) console.log('Error ', err);
-      else {
-        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
+    ffmpeg(inputFilePath)
+      .outputOptions(['-q:v 1', '-q:a 1']) // クオリティの設定
+      .videoCodec(compressOptions.videoCodec)
+      .audioCodec(compressOptions.audioCodec)
+      .size(compressOptions.size)
+      .on('end', () => {
         resolve(outputFilePath);
-      }
-    });
+        console.log('COMPRESS COMPLETED👏');
+      })
+      .on('error', (err) => {
+        console.error('error happened🖕', err);
+      })
+      .save(outputFilePath);
   });
 };
 
