@@ -349,18 +349,18 @@ export const createPost = async (request, response) => {
       } else if (contentObject.type === 'video') {
         // --- ver1
         // ffmpegを通して、
-        // const outputFileName = `optimized-${contentObject.fileName}`;
-        // const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, fileName);
-        // const fileStream = fs.createReadStream(optimizedVideoFilePath);
-        // // awsにuploadする。
-        // await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-        // await unlinkFile(optimizedVideoFilePath);
-        // return content;
+        const outputFileName = `optimized-${contentObject.fileName}`;
+        const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, fileName);
+        const fileStream = fs.createReadStream(optimizedVideoFilePath);
+        // awsにuploadする。
+        await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
+        await unlinkFile(optimizedVideoFilePath);
+        return content;
         // ---
 
         // ver2
-        await uploadVideo(contentObject.fileName);
-        return content;
+        // await uploadVideo(contentObject.fileName);
+        // return content;
       }
     });
 
