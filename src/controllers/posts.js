@@ -360,6 +360,7 @@ export const createPost = async (request, response) => {
 
         // ver2
         await uploadVideo(contentObject.fileName);
+        return content;
       }
     });
 
