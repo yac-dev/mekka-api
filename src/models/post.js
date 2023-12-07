@@ -15,8 +15,15 @@ const postSchema = mongoose.Schema({
   space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
   createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
   createdAt: Date,
-  totalComments: Number,
-  totalReactions: Number,
+  totalComments: {
+    type: Number,
+    default: 0,
+  },
+  totalReactions: {
+    type: Number,
+    default: 0,
+  },
+  // typeormで、mongodb用とかだといいよなー。。
   // disappearAt: Date, // もしくはnull
 
   // tags: [{ type: mongoose.Schema.ObjectId, ref: 'Tag' }],
