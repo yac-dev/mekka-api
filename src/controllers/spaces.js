@@ -62,6 +62,7 @@ export const createSpace = async (request, response) => {
       space.disappearAfter = Number(disappearAfter);
     }
 
+    let createdReactions;
     // reactionを作る。
     if (isReactionAvailable && reactions.length) {
       const reactionOptions = JSON.parse(reactions).map((reaction) => {
@@ -80,7 +81,7 @@ export const createSpace = async (request, response) => {
         }
       });
       // ここで、さらにsendする内容に関しても持っておかないとあかん。
-      const createdReactions = await Reaction.insertMany(reactionOptions);
+      createdReactions = await Reaction.insertMany(reactionOptions);
       const reactionIds = createdReactions.map((reaction) => reaction._id);
       space.reactions = reactionIds; // spaceに直接idを入れる。
     }
@@ -121,7 +122,7 @@ export const createSpace = async (request, response) => {
           isReactionAvailable: space.isReactionAvailable,
           videoLength: space.videoLength,
           disappearAfter: space.disappearAfter,
-          reactions: space.isReactionAvailable ? JSON.parse(reactions) : undefined,
+          reactions: space.isReactionAvailable ? createdReactions : undefined,
           createdBy: userData,
           createdAt: space.createdAt,
           totalPosts: space.totalPosts,
