@@ -44,6 +44,7 @@ const spaceSchema = mongoose.Schema({
     ref: 'User',
   },
   createdAt: Date,
+  updatedAt: Date, //　こんな感じで行きたいわけで。。。
 });
 
 const Space = mongoose.model('Space', spaceSchema);

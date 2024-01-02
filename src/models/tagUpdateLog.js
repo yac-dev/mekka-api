@@ -12,6 +12,6 @@ const tagUpdateLogSchema = mongoose.Schema({
   updatedAt: Date,
 });
 
-// const SpaceLog = mongoose.model('SpaceLog', spaceLogSchema);
-// export default SpaceLog;
+const TagUpdateLog = mongoose.model('TagUpdateLog', tagUpdateLogSchema);
+export default TagUpdateLog;
 // そうか、tagで最後にupdagteされた日付と、自分のspaceに最後出入りした日付を比べるのか。。。

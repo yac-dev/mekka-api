@@ -6,6 +6,8 @@ import Comment from '../models/comment.js';
 import Tag from '../models/tag.js';
 import LocationTag from '../models/locationTag.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
+import SpaceUpdateLog from '../models/spaceUpdateLog.js';
+import TagUpdateLog from '../models/tagUpdateLog.js';
 import { uploadPhoto, uploadVideo } from '../services/s3.js';
 import path from 'path';
 import sharp from 'sharp';
@@ -484,6 +486,25 @@ export const createPost = async (request, response) => {
 
       const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
     }
+    // spaceのupdateLogを作る。
+    const spaceUpdateLog = await SpaceUpdateLog.create({
+      space: spaceId,
+      updatedBy: createdBy,
+      updatedAt: new Date(),
+    });
+
+    // tagのupdate logを作る。
+    if (tagIds.length) {
+      const tagUpdateLogObjects = tagIds.map((tagId) => {
+        return {
+          tag: tagId,
+          updatedBy: createdBy,
+          updatedAt: new Date(),
+        };
+      });
+
+      const tagUpdateLogDocuments = await TagUpdateLog.insertMany(tagUpdateLogObjects);
+    }
 
     response.status(201).json({
       post: {
@@ -531,6 +552,7 @@ export const getPost = async (request, response) => {
   }
 };
 
+// tableを取るためだけのqueryが必要なのかね。。。
 export const getPostsByTagId = async (request, response) => {
   try {
     const page = request.query.page;
@@ -555,7 +577,7 @@ export const getPostsByTagId = async (request, response) => {
           { path: 'createdBy', model: 'User', select: '_id name avatar' },
         ],
       });
-    console.log(postAndTagRelationships);
+    // console.log(postAndTagRelationships);
 
     const posts = postAndTagRelationships
       .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
@@ -570,7 +592,7 @@ export const getPostsByTagId = async (request, response) => {
           createdBy: relationship.post.createdBy,
         };
       });
-    console.log('these are posts', posts);
+    // console.log('these are posts', posts);
     response.status(200).json({
       posts,
     });
