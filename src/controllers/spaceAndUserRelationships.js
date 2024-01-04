@@ -106,3 +106,22 @@ export const getMySpaces = async (request, response) => {
 //   space: '2'
 //   updatedAt: 2023/12/10
 // }
+
+export const updateSpaceLastCheckedIn = async (request, response) => {
+  try {
+    const spaceAndUserRelationship = await SpaceAndUserRelationship.findOne({
+      user: request.params.userId,
+      space: request.body.spaceId,
+    });
+
+    spaceAndUserRelationship.lastCheckedIn = new Date();
+    spaceAndUserRelationship.save();
+
+    console.log('now updated -> ', new Date());
+    response.status(200).json({
+      message: 'success', // 何も返す必要はないかな。
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
