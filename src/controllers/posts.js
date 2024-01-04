@@ -489,6 +489,7 @@ export const createPost = async (request, response) => {
     // spaceのupdateLogを作る。
     const spaceUpdateLog = await SpaceUpdateLog.create({
       space: spaceId,
+      tag: tagIds[0],
       updatedBy: createdBy,
       updatedAt: new Date(),
     });

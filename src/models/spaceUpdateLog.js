@@ -5,6 +5,10 @@ const spaceUpdateLogSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'Space',
   },
+  tag: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Tag',
+  }, // これでtagの数なんかもあのdsでまとめてユーザーに返すことになる。
   updatedBy: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
