@@ -24,6 +24,9 @@ export const getMySpaces = async (request, response) => {
         },
       ],
     });
+    // 基本、clientに返す形としては
+
+    // みたいな感じのdata構造でユーザーに返す感じ。
 
     // console.log(JSON.stringify(documents, null, 4));
     // ここのfilterも微妙だな。。。
@@ -47,17 +50,35 @@ export const getMySpaces = async (request, response) => {
         }
       }
     }
+    // {spaceId2: {tagId1: 2, tagId3: 4}, spaceId3: {tagId34: 4, tagId9: 3}}
 
+    // [ {space: 1, updatedAt: 12/01, updatedBy: 'user1', tagId: 1},
+    //   {space: 1, updatedAt: 12/01, updatedBy: 'user1', tagId: 4} ]
+    console.log('res', res);
     const updateTable = {};
     for (let i = 0; i < res.length; i++) {
       if (updateTable[res[i].space]) {
-        updateTable[res[i].space]++;
+        // updateTable[res[i].space]++;
+        // 何もしない感じか。。。
+        if (updateTable[res[i].space][res[i].tag]) {
+          updateTable[res[i].space][res[i].tag]++;
+        } else {
+          updateTable[res[i].space][res[i].tag] = 1;
+        }
       } else {
-        updateTable[res[i].space] = 1;
+        updateTable[res[i].space] = {};
+        updateTable[res[i].space][res[i].tag] = 1;
+        // if (updateTable[res[i].space][res[i].tag]) {
+        //   updateTable[res[i].space][res[i].tag]++;
+        // } else {
+        //   updateTable[res[i].space][res[i].tag] = 1;
+        // }
+        // updateTable[res[i].space] = 1;
       }
     }
+    console.log('updates', updateTable);
     // これを返す。
-
+    // これを渡して、tagid propertyの合計値を無効で算出する。
     response.status(200).json({
       spaceAndUserRelationships,
       updateTable,
