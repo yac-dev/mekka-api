@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const postSchema = mongoose.Schema({
   contents: [{ type: mongoose.Schema.ObjectId, ref: 'Content' }],
+  type: {
+    type: String,
+    enum: ['normal', 'moment'],
+  },
   caption: String,
   locationTag: { type: mongoose.Schema.ObjectId, ref: 'LocationTag' }, // これは一つのみ。
   space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
@@ -15,6 +19,15 @@ const postSchema = mongoose.Schema({
     type: Number,
     default: 0,
   },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: [Number],
+  },
+  disappearAt: Date,
   // typeormで、mongodb用とかだといいよなー。。
   // disappearAt: Date, // もしくはnull
 
