@@ -293,15 +293,18 @@ export const createPost = async (request, response) => {
       createdLocationTag,
       addedLocationTag,
       contents,
+      type,
+      disappearAfter,
     } = request.body;
     // 現在の時間にdissaperAfter(minute)を足した日時を出す。
     // const parsedLocation = JSON.parse(location);
+    const createdAt = new Date();
+    const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
     const parsedReactions = JSON.parse(reactions);
     const parsedTags = JSON.parse(addedTags);
     const parsedCreatedTags = JSON.parse(createdTags);
     // const parsedLocationTag = JSON.parse(addedLocationTag);
     const files = request.files;
-    const createdAt = new Date();
     const contentIds = [];
     // const contents = [];
     console.log('these are contents ', JSON.parse(contents));
@@ -387,36 +390,38 @@ export const createPost = async (request, response) => {
     const contentDocuments = await Promise.all(contentPromises);
 
     // // 2,postを作る
-    let locationTag;
-    if (createdLocationTag) {
-      locationTag = await LocationTag.create({
-        iconType: parsedCreatedLocationTag.iconType,
-        icon: parsedCreatedLocationTag.icon,
-        image: parsedCreatedLocationTag.image,
-        name: parsedCreatedLocationTag.name,
-        point: parsedCreatedLocationTag.point,
-        color: parsedCreatedLocationTag.color,
-        space: spaceId,
-        createdBy: createdBy,
-      });
-    }
+    // let locationTag;
+    // if (createdLocationTag) {
+    //   locationTag = await LocationTag.create({
+    //     iconType: parsedCreatedLocationTag.iconType,
+    //     icon: parsedCreatedLocationTag.icon,
+    //     image: parsedCreatedLocationTag.image,
+    //     name: parsedCreatedLocationTag.name,
+    //     point: parsedCreatedLocationTag.point,
+    //     color: parsedCreatedLocationTag.color,
+    //     space: spaceId,
+    //     createdBy: createdBy,
+    //   });
+    // }
 
-    let addingLocationTag;
-    if (createdLocationTag) {
-      addingLocationTag = createdLocationTag;
-    } else if (addedLocationTag) {
-      addingLocationTag = addedLocationTag;
-    } else {
-      addingLocationTag = null;
-    }
+    // let addingLocationTag;
+    // if (createdLocationTag) {
+    //   addingLocationTag = createdLocationTag;
+    // } else if (addedLocationTag) {
+    //   addingLocationTag = addedLocationTag;
+    // } else {
+    //   addingLocationTag = null;
+    // }
 
-    console.log(addingLocationTag);
+    // console.log(addingLocationTag);
 
     const post = await Post.create({
       contents: contentIds,
+      type,
       caption,
       space: spaceId,
-      locationTag: addingLocationTag ? addingLocationTag._id : null,
+      // locationTag: addingLocationTag ? addingLocationTag._id : null,
+      disappearAt,
       createdBy,
       createdAt,
     });
@@ -511,11 +516,13 @@ export const createPost = async (request, response) => {
       post: {
         _id: post._id,
         contents: contentDocuments,
+        type: post.type,
         caption: post.caption,
         space: spaceId,
-        locationTag: addingLocationTag ? addingLocationTag._id : null,
+        // locationTag: addingLocationTag ? addingLocationTag._id : null,
         createdBy: post.createdBy,
         createdAt: post.createdAt,
+        disappearAt: post.disappearAt,
         // content: {
         //   data: contents[0].data,
         //   type: contents[0].type,
@@ -556,6 +563,7 @@ export const getPost = async (request, response) => {
 // tableを取るためだけのqueryが必要なのかね。。。
 export const getPostsByTagId = async (request, response) => {
   try {
+    const now = new Date(new Date().getTime());
     const page = request.query.page;
     const limitPerPage = 12;
     const sortingCondition = { _id: 1 };
@@ -569,7 +577,7 @@ export const getPostsByTagId = async (request, response) => {
       .populate({
         path: 'post',
         model: 'Post',
-        select: '_id contents type locationTag createdAt createdBy caption',
+        select: '_id contents type createdAt createdBy caption location disappearAt',
         populate: [
           {
             path: 'contents',
@@ -581,22 +589,101 @@ export const getPostsByTagId = async (request, response) => {
     // console.log(postAndTagRelationships);
 
     const posts = postAndTagRelationships
-      .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
+      .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
       .map((relationship, index) => {
         // console.log(relationship.post);
-        return {
-          _id: relationship.post._id,
-          contents: relationship.post.contents,
-          caption: relationship.post.caption,
-          locationTag: relationship.post.locationTag,
-          createdAt: relationship.post.createdAt,
-          createdBy: relationship.post.createdBy,
-        };
+        if (
+          relationship.post.type === 'normal' ||
+          (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
+        ) {
+          return {
+            _id: relationship.post._id,
+            contents: relationship.post.contents,
+            type: relationship.post.type,
+            caption: relationship.post.caption,
+            locationTag: relationship.post.locationTag,
+            createdAt: relationship.post.createdAt,
+            createdBy: relationship.post.createdBy,
+            disappearAt: relationship.post.disappearAt,
+          };
+        }
       });
     // console.log('these are posts', posts);
     response.status(200).json({
       posts,
     });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getPostsByTagIdAndRegion = async (request, response) => {
+  try {
+    const { region } = request.body;
+    const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
+    const minLat = latitude - latitudeDelta / 2;
+    const maxLat = latitude + latitudeDelta / 2;
+    const minLng = longitude - longitudeDelta / 2;
+    const maxLng = longitude + longitudeDelta / 2;
+    const now = new Date(new Date().getTime());
+
+    console.log('min lat -> ', minLat);
+    console.log('max lat -> ', maxLat);
+    console.log('min lng -> ', minLng);
+    console.log('max lng -> ', maxLng);
+
+    const postAndTagRelationships = await PostAndTagRelationship.find({
+      tag: request.params.tagId,
+    });
+    console.log('tag id -> ', request.params.tagId);
+    const postIds = postAndTagRelationships.map((rel) => rel.post);
+    console.log(postIds);
+    const posts = await Post.find({
+      _id: { $in: postIds },
+      'location.coordinates': {
+        $geoWithin: {
+          $box: [
+            [minLng, minLat],
+            [maxLng, maxLat],
+          ],
+        },
+      },
+      disappearAt: {
+        $gt: now,
+      },
+    }).populate([
+      {
+        path: 'contents',
+        model: 'Content',
+      },
+      { path: 'createdBy', model: 'User', select: '_id name avatar' },
+    ]);
+    // 'location.coordinates': {
+    //   $geoWithin: {
+    //     $box: [
+    //       [minLng, minLat],
+    //       [maxLng, maxLat],
+    //     ],
+    //   },
+    // },
+    console.log(posts);
+
+    response.status(200).json({
+      posts,
+    });
+    // const posts = postAndTagRelationships
+    //   .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
+    //   .map((relationship, index) => {
+    //     // console.log(relationship.post);
+    //     return {
+    //       _id: relationship.post._id,
+    //       contents: relationship.post.contents,
+    //       caption: relationship.post.caption,
+    //       locationTag: relationship.post.locationTag,
+    //       createdAt: relationship.post.createdAt,
+    //       createdBy: relationship.post.createdBy,
+    //     };
+    //   });
   } catch (error) {
     console.log(error);
   }
