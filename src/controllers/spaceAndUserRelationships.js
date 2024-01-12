@@ -56,6 +56,9 @@ export const getMySpaces = async (request, response) => {
     //   {space: 1, updatedAt: 12/01, updatedBy: 'user1', tagId: 4} ]
     console.log('res', res);
     const updateTable = {};
+    spaceAndUserRelationships.forEach((relationship) => {
+      updateTable[relationship.space._id] = {};
+    });
     for (let i = 0; i < res.length; i++) {
       if (updateTable[res[i].space]) {
         // updateTable[res[i].space]++;

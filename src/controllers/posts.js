@@ -16,6 +16,7 @@ import util from 'util';
 import { exec } from 'child_process';
 // const ffmpeg = require('fluent-ffmpeg');
 import ffmpeg from 'fluent-ffmpeg';
+import { Expo } from 'expo-server-sdk';
 const unlinkFile = util.promisify(fs.unlink);
 
 // post時に何をするかだね。
@@ -607,8 +608,11 @@ export const getPostsByTagId = async (request, response) => {
             disappearAt: relationship.post.disappearAt,
           };
         }
-      });
+      })
+      .filter((relationship) => relationship);
+
     // console.log('these are posts', posts);
+    console.log('posts', posts);
     response.status(200).json({
       posts,
     });
@@ -648,9 +652,9 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
           ],
         },
       },
-      disappearAt: {
-        $gt: now,
-      },
+      // disappearAt: {
+      //   $gt: now,
+      // },
     }).populate([
       {
         path: 'contents',
@@ -658,6 +662,14 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
       },
       { path: 'createdBy', model: 'User', select: '_id name avatar' },
     ]);
+
+    const returning = posts
+      .map((post) => {
+        if (post.type === 'normal' || (post.type === 'moment' && post.disappearAt > now)) {
+          return post;
+        }
+      })
+      .filter((post) => post);
     // 'location.coordinates': {
     //   $geoWithin: {
     //     $box: [
@@ -666,10 +678,10 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
     //     ],
     //   },
     // },
-    console.log(posts);
+    console.log('fetched by map', posts);
 
     response.status(200).json({
-      posts,
+      posts: returning,
     });
     // const posts = postAndTagRelationships
     //   .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
