@@ -13,10 +13,12 @@ import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs';
 import util from 'util';
+import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import { exec } from 'child_process';
 // const ffmpeg = require('fluent-ffmpeg');
 import ffmpeg from 'fluent-ffmpeg';
 import { Expo } from 'expo-server-sdk';
+const expo = new Expo();
 const unlinkFile = util.promisify(fs.unlink);
 
 // post時に何をするかだね。
@@ -513,6 +515,48 @@ export const createPost = async (request, response) => {
       const tagUpdateLogDocuments = await TagUpdateLog.insertMany(tagUpdateLogObjects);
     }
 
+    // ---------------------
+
+    const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
+      space: spaceId,
+      user: { $ne: createdBy },
+    })
+      .populate({ path: 'user' })
+      .select({ pushToken: 1 });
+    const membersPushTokens = spaceAndUserRelationships.map((rel) => {
+      return rel.user.pushToken;
+    });
+
+    let notificationTitle = '';
+
+    const notificationData = {
+      notificationType: 'Post',
+      spaceId: spaceId,
+      tagId: tagIds[0],
+    };
+
+    const chunks = expo.chunkPushNotifications(
+      membersPushTokens.map((token) => ({
+        to: token,
+        sound: 'default',
+        data: notificationData,
+        title: 'Member has posted.',
+        body: caption,
+      }))
+    );
+
+    const tickets = [];
+
+    for (let chunk of chunks) {
+      try {
+        let receipts = await expo.sendPushNotificationsAsync(chunk);
+        tickets.push(...receipts);
+        console.log('Push notifications sent:', receipts);
+      } catch (error) {
+        console.error('Error sending push notification:', error);
+      }
+    }
+
     response.status(201).json({
       post: {
         _id: post._id,
@@ -521,7 +565,7 @@ export const createPost = async (request, response) => {
         caption: post.caption,
         space: spaceId,
         // locationTag: addingLocationTag ? addingLocationTag._id : null,
-        createdBy: post.createdBy,
+        createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
         createdAt: post.createdAt,
         disappearAt: post.disappearAt,
         // content: {
@@ -578,7 +622,7 @@ export const getPostsByTagId = async (request, response) => {
       .populate({
         path: 'post',
         model: 'Post',
-        select: '_id contents type createdAt createdBy caption location disappearAt',
+        select: '_id contents type createdAt createdBy caption location disappearAt totalComments totalReactions',
         populate: [
           {
             path: 'contents',
@@ -606,6 +650,8 @@ export const getPostsByTagId = async (request, response) => {
             createdAt: relationship.post.createdAt,
             createdBy: relationship.post.createdBy,
             disappearAt: relationship.post.disappearAt,
+            totalComments: relationship.post.totalComments,
+            totalReactions: relationship.post.totalReactions,
           };
         }
       })

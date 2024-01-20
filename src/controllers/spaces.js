@@ -37,18 +37,21 @@ export const createSpace = async (request, response) => {
     } = request.body;
     console.log('this is the payload', request.body);
     const userData = JSON.parse(createdBy);
+    const isPublicValue = JSON.parse(isPublic);
+    const isCommentAvailableValue = JSON.parse(isCommentAvailable);
+    const isReactionAvailableValue = JSON.parse(isReactionAvailable);
     console.log(userData);
 
-    const randomString = generateRandomString(20);
+    const randomString = generateRandomString(12);
     const space = new Space({
       name,
       icon: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/icons/${request.file.filename}`,
       contentType,
       description,
       secretKey: randomString,
-      isPublic: Boolean(isPublic),
-      isCommentAvailable: Boolean(isCommentAvailable),
-      isReactionAvailable: Boolean(isReactionAvailable),
+      isPublic: isPublicValue,
+      isCommentAvailable: isCommentAvailableValue,
+      isReactionAvailable: isReactionAvailableValue,
       createdBy: new mongoose.Types.ObjectId(userData._id),
       createdAt: new Date(),
       totalPosts: 0,
@@ -63,9 +66,9 @@ export const createSpace = async (request, response) => {
       space.disappearAfter = Number(disappearAfter);
     }
 
-    let createdReactions;
+    let returningReactions;
     // reactionを作る。
-    if (isReactionAvailable && reactions.length) {
+    if (isReactionAvailableValue && reactions.length) {
       const reactionOptions = JSON.parse(reactions).map((reaction) => {
         if (reaction.type === 'emoji') {
           return {
@@ -82,15 +85,35 @@ export const createSpace = async (request, response) => {
         }
       });
       // ここで、さらにsendする内容に関しても持っておかないとあかん。
-      createdReactions = await Reaction.insertMany(reactionOptions);
-      const reactionIds = createdReactions.map((reaction) => reaction._id);
+      const createdReactionDocuments = await Reaction.insertMany(reactionOptions);
+      const reactionIds = createdReactionDocuments.map((reaction) => reaction._id);
       space.reactions = reactionIds; // spaceに直接idを入れる。
+      returningReactions = JSON.parse(reactions).map((reaction) => {
+        if (reaction.type === 'emoji') {
+          return {
+            space: space._id,
+            type: 'emoji',
+            emoji: reaction.emoji,
+          };
+        } else if (reaction.type === 'sticker') {
+          return {
+            space: space._id,
+            type: 'sticker',
+            sticker: {
+              _id: reaction.sticker._id,
+              url: reaction.sticker.url,
+              name: reaction.sticker.name,
+            },
+          };
+        }
+      });
     }
 
     const spaceAndUserRelationship = await SpaceAndUserRelationship.create({
       space: space._id,
       user: userData._id,
       createdAt: new Date(),
+      lastCheckedIn: new Date(),
     });
     space.save();
     await uploadIcon(request.file.filename);
@@ -123,7 +146,7 @@ export const createSpace = async (request, response) => {
           isReactionAvailable: space.isReactionAvailable,
           videoLength: space.videoLength,
           disappearAfter: space.disappearAfter,
-          reactions: space.isReactionAvailable ? createdReactions : undefined,
+          reactions: space.isReactionAvailable ? returningReactions : undefined,
           createdBy: userData,
           createdAt: space.createdAt,
           totalPosts: space.totalPosts,

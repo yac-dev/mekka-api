@@ -10,6 +10,10 @@ const reactionSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'Sticker',
   },
+  caption: {
+    type: String,
+    default: '',
+  },
   space: {
     type: mongoose.Schema.ObjectId,
     ref: 'Space',

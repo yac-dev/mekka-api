@@ -1,6 +1,8 @@
 import UserAndReactionRelationship from '../models/userAndReactionRelationships.js';
 import ReactionStatus from '../models/reactionStatus.js';
 import Post from '../models/post.js';
+import { Expo } from 'expo-server-sdk';
+const expo = new Expo();
 
 export const createReaction = async (request, response) => {
   try {
@@ -21,9 +23,41 @@ export const createReaction = async (request, response) => {
     reactionStatus.count++;
     reactionStatus.save();
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate({
+      path: 'createdBy',
+    });
     post.totalReactions++;
     post.save();
+
+    // ---
+    let notificationTitle = '';
+
+    const notificationData = {
+      notificationType: 'Comment',
+    };
+
+    // 誰々があなたの投稿にコメントしました。
+    if (post.createdBy.pushToken) {
+      const chunks = expo.chunkPushNotifications({
+        to: post.createdBy.pushToken,
+        sound: 'default',
+        data: notificationData,
+        title: 'Commented to your post.',
+        body: request.body.content,
+      });
+
+      const tickets = [];
+
+      for (let chunk of chunks) {
+        try {
+          let receipts = await expo.sendPushNotificationsAsync(chunk);
+          tickets.push(...receipts);
+          console.log('Push notifications sent:', receipts);
+        } catch (error) {
+          console.error('Error sending push notification:', error);
+        }
+      }
+    }
 
     response.status(200).json({
       reactionStatus,
