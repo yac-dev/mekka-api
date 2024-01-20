@@ -26,7 +26,7 @@ const s3 = new S3({
 
 export const getStickers = async (request, response) => {
   try {
-    const stickers = await Sticker.find();
+    const stickers = await Sticker.find({ isPublic: true });
     response.status(200).json({
       stickers,
     });
@@ -111,6 +111,7 @@ export const createSticker = async (request, response) => {
       url: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/stickers/removed-${request.body.fileName}`,
       name: `removed-${request.body.fileName}`,
       createdBy: request.body.userId,
+      isPublic: false,
     });
     response.status(200).json({
       sticker,

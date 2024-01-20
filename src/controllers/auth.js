@@ -93,3 +93,17 @@ export const deleteMe = async (request, response) => {
     console.log(error);
   }
 };
+
+// signup後にpushTokenを登録する感じか。
+export const registerPushToken = async (request, response) => {
+  try {
+    const user = await User.findById(request.params.userId);
+    user.pushToken = request.body.pushToken;
+    user.save();
+    response.status(200).json({
+      message: 'success',
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
