@@ -66,47 +66,74 @@ export const createSpace = async (request, response) => {
       space.disappearAfter = Number(disappearAfter);
     }
 
-    let returningReactions;
+    // なるほど。_idを返してない。だから毎回エラーになってた。。。
+    // 返す時と入れる時でdata構造違うの困るわ。。。。
+    // 作った後に再度populateでqueryするしかないかな。。。今はそれでいいか。。。
+    let reactionOptions;
     // reactionを作る。
     if (isReactionAvailableValue && reactions.length) {
-      const reactionOptions = JSON.parse(reactions).map((reaction) => {
+      reactionOptions = JSON.parse(reactions).map((reaction) => {
         if (reaction.type === 'emoji') {
           return {
+            _id: new mongoose.Types.ObjectId(),
             space: space._id,
             type: 'emoji',
             emoji: reaction.emoji,
           };
         } else if (reaction.type === 'sticker') {
           return {
+            _id: new mongoose.Types.ObjectId(),
             space: space._id,
+            type: 'sticker',
+            sticker: reaction.sticker,
+          };
+        }
+      });
+      //シンプルに、ObjectIdで持っておこうか。
+      // ここで、さらにsendする内容に関しても持っておかないとあかん。
+      // とりあえず、reaction作った後じゃないと話にならないよね。だってidが必要だから。でも、stickerのreference内容を含んでいないといけないわけで。。。そこがな
+      const inserting = reactionOptions.map((reaction) => {
+        if (reaction.type === 'emoji') {
+          return {
+            _id: reaction._id,
+            space: reaction.space,
+            type: 'emoji',
+            emoji: reaction.emoji,
+          };
+        } else if (reaction.type === 'sticker') {
+          return {
+            _id: reaction._id,
+            space: reaction.space,
             type: 'sticker',
             sticker: reaction.sticker._id,
           };
         }
       });
-      // ここで、さらにsendする内容に関しても持っておかないとあかん。
-      const createdReactionDocuments = await Reaction.insertMany(reactionOptions);
-      const reactionIds = createdReactionDocuments.map((reaction) => reaction._id);
+      const reactionDocuents = await Reaction.insertMany(inserting);
+      // createdReactions = reactionDocuents.populate({
+      //   path: 'sticker',
+      // }); こうやって、作った後のpopulateもできないわけか。。。
+      const reactionIds = reactionDocuents.map((reaction) => reaction._id);
       space.reactions = reactionIds; // spaceに直接idを入れる。
-      returningReactions = JSON.parse(reactions).map((reaction) => {
-        if (reaction.type === 'emoji') {
-          return {
-            space: space._id,
-            type: 'emoji',
-            emoji: reaction.emoji,
-          };
-        } else if (reaction.type === 'sticker') {
-          return {
-            space: space._id,
-            type: 'sticker',
-            sticker: {
-              _id: reaction.sticker._id,
-              url: reaction.sticker.url,
-              name: reaction.sticker.name,
-            },
-          };
-        }
-      });
+      // returningReactions = JSON.parse(reactions).map((reaction) => {
+      //   if (reaction.type === 'emoji') {
+      //     return {
+      //       space: space._id,
+      //       type: 'emoji',
+      //       emoji: reaction.emoji,
+      //     };
+      //   } else if (reaction.type === 'sticker') {
+      //     return {
+      //       space: space._id,
+      //       type: 'sticker',
+      //       sticker: {
+      //         _id: reaction.sticker._id,
+      //         url: reaction.sticker.url,
+      //         name: reaction.sticker.name,
+      //       },
+      //     };
+      //   }
+      // });
     }
 
     const spaceAndUserRelationship = await SpaceAndUserRelationship.create({
@@ -146,7 +173,7 @@ export const createSpace = async (request, response) => {
           isReactionAvailable: space.isReactionAvailable,
           videoLength: space.videoLength,
           disappearAfter: space.disappearAfter,
-          reactions: space.isReactionAvailable ? returningReactions : undefined,
+          reactions: space.isReactionAvailable ? reactionOptions : undefined,
           createdBy: userData,
           createdAt: space.createdAt,
           totalPosts: space.totalPosts,
