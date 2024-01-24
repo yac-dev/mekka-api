@@ -298,6 +298,7 @@ export const createPost = async (request, response) => {
       contents,
       type,
       disappearAfter,
+      location,
     } = request.body;
     // 現在の時間にdissaperAfter(minute)を足した日時を出す。
     // const parsedLocation = JSON.parse(location);
@@ -306,19 +307,20 @@ export const createPost = async (request, response) => {
     const parsedReactions = JSON.parse(reactions);
     const parsedTags = JSON.parse(addedTags);
     const parsedCreatedTags = JSON.parse(createdTags);
+    const parsedLocation = JSON.parse(location);
     // const parsedLocationTag = JSON.parse(addedLocationTag);
     const files = request.files;
     const contentIds = [];
     // const contents = [];
     console.log('these are contents ', JSON.parse(contents));
     let parsedCreatedLocationTag;
-    if (createdLocationTag) {
-      parsedCreatedLocationTag = JSON.parse(createdLocationTag);
-    }
-    let parsedAddedLocationTag;
-    if (addedLocationTag) {
-      parsedAddedLocationTag = JSON.parse(addedLocationTag);
-    }
+    // if (createdLocationTag) {
+    //   parsedCreatedLocationTag = JSON.parse(createdLocationTag);
+    // }
+    // let parsedAddedLocationTag;
+    // if (addedLocationTag) {
+    //   parsedAddedLocationTag = JSON.parse(addedLocationTag);
+    // }
     console.log('request body from  ', request.body);
 
     // console.log(parsedCreatedLocationTag);
@@ -424,7 +426,8 @@ export const createPost = async (request, response) => {
       caption,
       space: spaceId,
       // locationTag: addingLocationTag ? addingLocationTag._id : null,
-      disappearAt,
+      parsedLocation,
+      disappearAt: type === 'moment' ? disappearAt : null,
       createdBy,
       createdAt,
     });
