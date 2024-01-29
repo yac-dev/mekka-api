@@ -227,9 +227,10 @@ const sharpImage = async (inputFileName) => {
   const outputPath = path.join(__dirname, 'buffer', outputFileName);
   // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
   const processed = await sharp(fileInput)
+    .resize(700)
     .webp({ quality: 1 })
     // .toFile(outputPath)
-    .toBuffer((err, data) => console.log(data));
+    .toBuffer((err, data) => console.log('finished...'));
   return processed;
 };
 
@@ -283,6 +284,25 @@ const optimizeVideo = (originalFileName, newFileName) => {
 
 // photo postと、video postで、場合わけをしないといけないな。。。
 // videoの場合は、ffmpeg通さないといけないから。
+export const experiment = async (request, response) => {
+  try {
+    const data = request.file.filename;
+    console.log(data);
+    // const sharpedImageBinary = await sharpImage(contentObject.fileName);
+    const __dirname = path.resolve();
+    const fileInput = path.join(__dirname, 'buffer', request.file.filename);
+    const outputFileName = `${request.file.filename.split('.')[0]}.webp`;
+    const outputPath = path.join(__dirname, 'buffer', outputFileName);
+    const processed = await sharp(fileInput).resize(700).webp({ quality: 1 }).toFile(outputPath);
+    // .toBuffer((err, data) => console.log(data));
+    response.status(201).json({
+      message: 'success',
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const createPost = async (request, response) => {
   try {
     // postで、reactionを全部持っておかないとね。

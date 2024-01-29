@@ -9,9 +9,11 @@ import {
   getPostsByUserId,
   getPostsByLocationTagId,
   getCommentsByPostId,
+  experiment,
 } from '../controllers/posts.js';
 
 router.route('/').post(multerParser.array('bufferContents', 10), createPost);
+router.route('/experiment').post(multerParser.single('experiment'), experiment);
 router.route('/:postId').get(getPost);
 router.route('/:postId/comments').get(getCommentsByPostId);
 router.route('/tag/:tagId').get(getPostsByTagId);
