@@ -384,7 +384,7 @@ export const createPost = async (request, response) => {
         const fileStream = fs.createReadStream(optimizedVideoFilePath);
         // awsにuploadする。
         await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-        // await unlinkFile(optimizedVideoFilePath);
+        await unlinkFile(optimizedVideoFilePath);
         return content;
         // ---
 
