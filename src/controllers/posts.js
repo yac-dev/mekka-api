@@ -446,7 +446,7 @@ export const createPost = async (request, response) => {
       caption,
       space: spaceId,
       // locationTag: addingLocationTag ? addingLocationTag._id : null,
-      parsedLocation,
+      location: parsedLocation,
       disappearAt: type === 'moment' ? disappearAt : null,
       createdBy,
       createdAt,
