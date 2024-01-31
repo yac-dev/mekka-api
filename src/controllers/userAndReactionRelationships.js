@@ -38,24 +38,36 @@ export const createReaction = async (request, response) => {
 
     // 誰々があなたの投稿にコメントしました。
     if (post.createdBy.pushToken) {
-      const chunks = expo.chunkPushNotifications({
+      console.log('token', post.createdBy.pushToken);
+      if (!Expo.isExpoPushToken(post.createdBy.pushToken)) {
+        console.error(`expo-push-token is not a valid Expo push token`);
+      }
+      const notifyMessage = {
         to: post.createdBy.pushToken,
         sound: 'default',
         data: notificationData,
-        title: 'Commented to your post.',
-        body: request.body.content,
-      });
+        title: 'Got reaction',
+        body: 'Got reaction',
+      };
+      const messages = [];
+      messages.push(notifyMessage);
+      const chunks = expo.chunkPushNotifications(messages);
 
       const tickets = [];
 
-      for (let chunk of chunks) {
-        try {
-          let receipts = await expo.sendPushNotificationsAsync(chunk);
-          tickets.push(...receipts);
-          console.log('Push notifications sent:', receipts);
-        } catch (error) {
-          console.error('Error sending push notification:', error);
-        }
+      try {
+        (async () => {
+          for (const chunk of chunks) {
+            try {
+              const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+              tickets.push(...ticketChunk);
+            } catch (error) {
+              console.error(error);
+            }
+          }
+        })();
+      } catch (error) {
+        console.error(error);
       }
     }
 
