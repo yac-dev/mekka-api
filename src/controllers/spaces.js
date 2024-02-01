@@ -7,6 +7,7 @@ import Tag from '../models/tag.js';
 import LocationTag from '../models/locationTag.js';
 import mongoose from 'mongoose';
 import TagUpdateLog from '../models/tagUpdateLog.js';
+import Icon from '../models/icon.js';
 
 // space, reactions, spaceAndUserRel, tagを作る。ここのhandlerで。
 function generateRandomString(length) {
@@ -359,13 +360,12 @@ export const getPostsBySpaceIdAndYearAndMonth = async (request, response) => {
 
 export const getTagsBySpaceId = async (request, response) => {
   try {
-    // relationshipのtableでもないし、大丈夫か。
-    const documents = await Tag.find({ space: request.params.spaceId });
-    // ここでそのspaceのtagsを取ってきて、
-    // かつここでそれらのtagのupdateを見る感じか。。。
-    const tagUpdateLogs = await TagUpdateLog.find({}); // まず全部とってきて、tag(id)とspaceのlastCheckedInとの見比べか。。。
+    const tagDocuments = await Tag.find({ space: request.params.spaceId }).populate({
+      path: 'icon',
+      model: 'Icon',
+    });
     response.status(200).json({
-      tags: documents,
+      tags: tagDocuments,
     });
   } catch (error) {
     console.log(error);
