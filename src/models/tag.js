@@ -1,14 +1,13 @@
 import mongoose from 'mongoose';
 
-// だから、lastUpdateするのは、first tagだけでいいかも。。。
 const tagSchema = mongoose.Schema({
-  iconType: String, // icon, image
-  icon: String,
-  image: String,
+  icon: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Icon',
+  }, // -> {_id: string, url: string, name: string}
   name: String,
   color: String,
   count: Number,
-  // lastUpdatedを持っておけばいいのかもしれないが、、、さらに数を出したいとなると、、、、
   space: {
     type: mongoose.Schema.ObjectId,
     ref: 'Space',
