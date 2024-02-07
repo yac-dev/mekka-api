@@ -18,6 +18,7 @@ import { exec } from 'child_process';
 // const ffmpeg = require('fluent-ffmpeg');
 import ffmpeg from 'fluent-ffmpeg';
 import { Expo } from 'expo-server-sdk';
+import mongoose from 'mongoose';
 const expo = new Expo();
 const unlinkFile = util.promisify(fs.unlink);
 
@@ -465,10 +466,15 @@ export const createPost = async (request, response) => {
     const tagIds = [];
 
     // 4 新しいtagを作る、もし、createdTagsがあったら。
+    // ここは、多分tagの_idでやるべきだよね。。。
+    // nameがhashのiconを見つけて、その_idを埋め込む必要がある。。。
     let createdTagDocuments;
+    let tagObjects;
+    // client側でもうhashTagを持っておこうか。。。
     if (parsedCreatedTags.length) {
-      const tagObjects = parsedCreatedTags.map((tag) => {
+      tagObjects = parsedCreatedTags.map((tag) => {
         return {
+          _id: new mongoose.Types.ObjectId(),
           iconType: tag.iconType,
           icon: tag.icon,
           color: tag.color,
@@ -480,7 +486,23 @@ export const createPost = async (request, response) => {
           updatedAt: new Date(),
         };
       });
-      createdTagDocuments = await Tag.insertMany(tagObjects);
+
+      const inserting = tagObjects.map((tagObject) => {
+        return {
+          _id: tagObject._id,
+          iconType: tagObject.iconType,
+          icon: tagObject.icon._id,
+          color: tagObject.color,
+          image: tagObject.image,
+          name: tagObject.name,
+          count: 1,
+          space: spaceId,
+          createdBy: createdBy,
+          updatedAt: new Date(),
+        };
+      });
+      // iconを、url付きで返したいのよ。
+      createdTagDocuments = await Tag.insertMany(inserting);
       createdTagDocuments.forEach((tagDocument) => {
         tagIds.push(tagDocument._id);
       });
@@ -597,7 +619,7 @@ export const createPost = async (request, response) => {
         // },
       },
       addedTags: [...parsedTags],
-      createdTags: createdTagDocuments ? createdTagDocuments : null,
+      createdTags: tagObjects ? tagObjects : null,
     });
     // ---------------------
   } catch (error) {

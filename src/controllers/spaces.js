@@ -145,12 +145,13 @@ export const createSpace = async (request, response) => {
     });
     space.save();
     await uploadIcon(request.file.filename);
+    const hashTag = await Tag.find({ name: 'hash' });
 
     // tagを作るだけでいいのかね。もしかしたら。
     // tagの数は、結構多くの数になる。spaceが全部持っておくのはベストではないだろう。それよりも、他にdelegateする方がいい。
     const tag = await Tag.create({
       iconType: 'icon',
-      icon: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/tagIcons/hashtag-normal.png`,
+      icon: hashTag._id,
       name: 'general',
       color: 'white',
       count: 1,
