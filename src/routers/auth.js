@@ -6,7 +6,7 @@ import { authorization } from '../middlewares/authorization.js';
 router.route('/signup').post(signup);
 router.route('/login').post(login);
 router.get('/loadme', authorization, loadMe);
-router.route('/:userId').delete(deleteMe);
+router.route('/').delete(deleteMe);
 router.route('/:userId/pushToken').patch(registerPushToken);
 
 export default router;

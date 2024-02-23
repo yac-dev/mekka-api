@@ -2,7 +2,6 @@ import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-// ここもアレだな。。。
 const storage = multer.diskStorage({
   destination: function (request, file, callback) {
     const __dirname = path.resolve();
