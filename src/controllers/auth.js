@@ -1,6 +1,7 @@
 import User from '../models/user.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import sgMail from '@sendgrid/mail';
 
 export const signup = async (request, response) => {
   try {
@@ -103,6 +104,54 @@ export const registerPushToken = async (request, response) => {
     response.status(200).json({
       message: 'success',
     });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// sendgridなんか使って、userにmailを送る。
+export const requestResetPassword = async (request, response) => {
+  try {
+    // emailがbodyに来る。
+    // emailをdbから見つけたら、send gridに送る。
+    const { email } = request.body;
+    const user = await User.find({ email });
+    if (user) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      const msg = {
+        to: email, // Change to your recipient
+        from: 'lamposttech@gmail.com', // Change to your verified sender
+        subject: 'Password Reset Request for Mekka',
+        text: `Hey ${user.name}, Your Mekka password can be reset by clicking the button below. If you did not request a new password, please ignore this email.`,
+        html: '<p>Click on this <a href=`https://${req.headers.host}/password/reset/${user.passwordResetToken}`>link</a> to reset your password.</p>',
+      };
+      // mekkaのweb appをnetrifyなんかに上げてそのurlを取っておく、それをここに設定する感じかな。
+      sgMail
+        .send(msg)
+        .then(() => {
+          console.log('Email sent');
+          response.status(200).json({
+            message: 'success',
+          });
+        })
+        .catch((error) => {
+          console.log('sendgrid error ->', error);
+          response.status.json({
+            message: 'error',
+          });
+        });
+    } else {
+      response.status(200).json({
+        message: 'success',
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const resetPassword = (request, response) => {
+  try {
   } catch (error) {
     console.log(error);
   }
