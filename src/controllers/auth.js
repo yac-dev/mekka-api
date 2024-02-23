@@ -2,9 +2,11 @@ import User from '../models/user.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import sgMail from '@sendgrid/mail';
+import { AppError } from '../utils/AppError.js';
 
-export const signup = async (request, response) => {
+export const signup = async (request, response, next) => {
   try {
+    // status codeも考慮するのか。。。
     const { name, email, password } = request.body;
     // if (password.length < 10) {
     //   return next(new AppError('Password has to be at least 10 characters long.', 400, 'PasswordLengthError'));
@@ -55,44 +57,48 @@ export const loadMe = async (request, response) => {
   }
 };
 
-export const login = async (request, response) => {
-  try {
-    const { email, password } = request.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      throw new Error('Nooooo.mail');
-    }
+export const login = async (request, response, next) => {
+  const { email, password } = request.body;
+  const user = await User.findOne({ email });
 
-    const isEnteredPasswordCorrect = await user.isPasswordCorrect(password, user.password);
-    if (!isEnteredPasswordCorrect) {
-      throw new Error('password not match...');
-    }
-
-    // 基本、10dayにしましょう。expirationは。
-    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
-
-    console.log('sending this', user);
-    response.json({
-      user,
-      jwt: jwtToken,
-    });
-  } catch (error) {
-    console.log(error.message, error.name);
-    response.status(400).send({
-      message: 'OOPS! Something wrong with your email or password. Please enter your email and password again.',
-    });
+  if (!user) {
+    return next(new AppError("The user doesn't exist.", 400));
   }
+
+  const isEnteredPasswordCorrect = await user.isPasswordCorrect(password, user.password);
+  if (!isEnteredPasswordCorrect) {
+    return next(new AppError('Something went wrong with your email or password.', 400));
+  }
+
+  const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
+
+  response.status(200).json({
+    status: 'success',
+    data: {
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        pushToken: user.pushToken,
+        createdAt: user.createdAt,
+      },
+      jwt: jwtToken,
+    },
+  });
 };
 
-export const deleteMe = async (request, response) => {
-  try {
-    const user = await User.findByIdAndRemove(request.params.userId);
-    response.status(204).json({
-      message: 'resource deleted successfully',
-    });
-  } catch (error) {
-    console.log(error);
+export const deleteMe = async (request, response, next) => {
+  const { email, password } = request.params;
+
+  const user = await User.findOneAndDelete({ email, password });
+  if (!user) {
+    return next(new AppError('Something went wrong with your email or password.', 400));
   }
+
+  response.status(204).json({
+    status: 'success',
+  });
 };
 
 // signup後にpushTokenを登録する感じか。

@@ -21,6 +21,7 @@ import usersRouter from './routers/users.js';
 import postAndTagRelationshipsRouter from './routers/postAndTagRelationship.js';
 import userAndReactionRelationshipsRouter from './routers/userAndReactionRelationships.js';
 import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships.js';
+import { handleErrors } from './controllers/errors.js';
 
 const app = express();
 app.use(cors());
@@ -44,5 +45,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/postandtagrelationships', postAndTagRelationshipsRouter);
 app.use('/api/userandreactionrelationships', userAndReactionRelationshipsRouter);
 app.use('/api/spaceanduserrelationships', spaceAndUserRelationshipsRouter);
+
+app.use(handleErrors);
 
 export default app;
