@@ -5,56 +5,50 @@ import sgMail from '@sendgrid/mail';
 import { AppError } from '../utils/AppError.js';
 
 export const signup = async (request, response, next) => {
-  try {
-    // status codeも考慮するのか。。。
-    const { name, email, password } = request.body;
-    // if (password.length < 10) {
-    //   return next(new AppError('Password has to be at least 10 characters long.', 400, 'PasswordLengthError'));
-    // }
-    // const alreadyExistUser = await User.findOne({ email });
-    // if (alreadyExistUser) {
-    //   throw new Error('Already exists');
-    // }
-    const randomAvatarNumber = Math.floor(Math.random() * 24) + 1;
-    const user = new User({
-      name,
-      email,
-      avatar: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/avatars/default-avatar-${randomAvatarNumber}.png`,
-      password,
-      createdAt: new Date(),
-      pushToken: '',
-    });
+  const { name, email, password } = request.body;
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(user.password, salt);
-    await user.save();
-
-    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
-    response.status(201).json({
-      status: 'success',
-      data: {
-        user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar },
-        jwt: jwtToken,
-      },
-    });
-  } catch (error) {
-    console.log(error);
-    response.status(400).json({
-      status: 'error',
-      data: error,
-    });
+  if (password.length < 10) {
+    return next(new AppError('Password has to be at least 10 characters long.', 400));
   }
+  const alreadyExistUser = await User.findOne({ email });
+  if (alreadyExistUser) {
+    return next(new AppError('The user with this email already exists.', 400));
+  }
+  const randomAvatarNumber = Math.floor(Math.random() * 24) + 1;
+  const user = new User({
+    name,
+    email,
+    avatar: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/avatars/default-avatar-${randomAvatarNumber}.png`,
+    password,
+    createdAt: new Date(),
+    pushToken: '',
+  });
+
+  const salt = await bcrypt.genSalt(10);
+  user.password = await bcrypt.hash(user.password, salt);
+  await user.save();
+
+  const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
+
+  response.status(201).json({
+    status: 'success',
+    data: {
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      },
+      jwt: jwtToken,
+    },
+  });
 };
 
 export const loadMe = async (request, response) => {
-  try {
-    const { user } = request;
-    response.status(200).json({
-      user,
-    });
-  } catch (error) {
-    console.log(error);
-  }
+  const { user } = request;
+  response.status(200).json({
+    user,
+  });
 };
 
 export const login = async (request, response, next) => {
