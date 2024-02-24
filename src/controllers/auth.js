@@ -83,12 +83,20 @@ export const login = async (request, response, next) => {
 };
 
 export const deleteMe = async (request, response, next) => {
-  const { email, password } = request.params;
+  const { email, password } = request.body;
 
-  const user = await User.findOneAndDelete({ email, password });
+  const user = await User.findOne({ email });
+
   if (!user) {
+    return next(new AppError("The user doesn't exist.", 400));
+  }
+
+  const isEnteredPasswordCorrect = await user.isPasswordCorrect(password, user.password);
+  if (!isEnteredPasswordCorrect) {
     return next(new AppError('Something went wrong with your email or password.', 400));
   }
+
+  await User.deleteOne({ email: user.email });
 
   response.status(204).json({
     status: 'success',
