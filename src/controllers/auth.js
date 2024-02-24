@@ -47,7 +47,13 @@ export const signup = async (request, response, next) => {
 export const loadMe = async (request, response) => {
   const { user } = request;
   response.status(200).json({
-    user,
+    status: 'success',
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+    },
   });
 };
 
