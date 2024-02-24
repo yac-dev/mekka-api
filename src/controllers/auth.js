@@ -38,6 +38,8 @@ export const signup = async (request, response, next) => {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        pushToken: user.pushToken,
+        createdAt: user.createdAt,
       },
       jwt: jwtToken,
     },
@@ -53,6 +55,8 @@ export const loadMe = async (request, response) => {
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      pushToken: user.pushToken,
+      createdAt: user.createdAt,
     },
   });
 };
