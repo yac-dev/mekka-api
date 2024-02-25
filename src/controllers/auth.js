@@ -94,6 +94,7 @@ export const login = async (request, response, next) => {
 
 export const deleteMe = async (request, response, next) => {
   const { email, password } = request.body;
+  // console.log('data', data); // こういう、programmer errorに関するerror handlingどうしたらいいだろうね。。。
 
   const user = await User.findOne({ email });
 
