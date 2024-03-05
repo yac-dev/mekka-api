@@ -139,30 +139,29 @@ export const registerPushToken = async (request, response) => {
   }
 };
 
-export const forgotPassword = async (request, response) => {
-  try {
-    const { email } = request.body;
-    const user = await User.findOne({ email }); // userが見つかったら、emailとpinでrecordを作る感じ。
-    if (user) {
-      const pinCode = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
-      const now = new Date();
-      const expiresAt = new Date(now);
-      expiresAt.setMinutes(now.getMinutes() + 30);
-      const emailAndPINRelationship = await EmailAndPINcodeRelationship.create({
-        email,
-        PINcode: pinCode,
-        createdAt: now,
-        expiresAt: expiresAt, // 30分後には使えないようにする。
-      });
+export const forgotPassword = async (request, response, next) => {
+  const { email } = request.body;
+  const user = await User.findOne({ email }); // userが見つかったら、emailとpinでrecordを作る感じ。
+  if (user) {
+    const pinCode = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setMinutes(now.getMinutes() + 30);
+    const emailAndPINRelationship = await EmailAndPINcodeRelationship.create({
+      email,
+      PINcode: pinCode,
+      createdAt: now,
+      expiresAt: expiresAt, // 30分後には使えないようにする。
+    });
 
-      const mailOptions = {
-        from: {
-          name: 'Mekka support',
-          address: process.env.NODEMAILER_USER,
-        },
-        to: user.email,
-        subject: `${user.name}, here's your PIN ${pinCode}`,
-        html: `
+    const mailOptions = {
+      from: {
+        name: 'Mekka support',
+        address: process.env.NODEMAILER_USER,
+      },
+      to: user.email,
+      subject: `${user.name}, here's your PIN ${pinCode}`,
+      html: `
           <h2>Hi ${user.name}.</h2>
           <br>
           <p>This is your temporary pin code.</p>
@@ -171,31 +170,59 @@ export const forgotPassword = async (request, response) => {
           <p>Please go back to Mekka, enter this pin and complete the reset.</p>
           <br>
           `,
-      };
+    };
 
-      await transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.log(error);
-        } else {
-          console.log('Email sent: ' + info.response);
-        }
-      });
+    await transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log('Email sent: ' + info.response);
+      }
+    });
 
-      response.status(200).json({
-        message: 'success',
-      });
-    } else {
-      response.status(200).json({
-        message: 'No user',
-      });
-    }
-  } catch (error) {
-    console.log(error);
+    response.status(200).json({
+      message: 'success',
+    });
+  } else {
+    return next(new AppError('No user...', 400));
   }
 };
 
+// pincodeのfield名ややこしいから変えよう。
+export const checkPINcode = async (request, response, next) => {
+  const { email, PINcode } = request.body;
+  const emailAndPINRelationship = await EmailAndPINcodeRelationship.findOne({ email, PINcode });
+  if (emailAndPINRelationship) {
+    response.status(200).json({
+      message: 'success',
+    });
+  } else {
+    return next(new AppError("PIN code doesn't match...", 400));
+  }
+};
+
+// ここ、pinまで着ないといけないようにしたいわな。middleware的な。。。
+// app側は、navigationで制御できるが、api側はまだだよな。。。
+export const updatePassword = async (request, response, next) => {
+  const { newPassword, email } = request.body;
+  if (newPassword.length < 10) {
+    return next(new AppError('Password has to be at least 10 characters long.', 400));
+  }
+
+  const user = await User.findOne({ email });
+
+  const salt = await bcrypt.genSalt(10);
+  user.password = await bcrypt.hash(newPassword, salt);
+  await user.save();
+
+  response.status(204).json({
+    message: 'success',
+  });
+};
+
+// password送られて新しくする感じ、
 // sendgridなんか使って、userにmailを送る。
-export const requestResetPassword = async (request, response) => {
+export const requestResetPassword = async (request, response, next) => {
   try {
     // emailがbodyに来る。
     // emailをdbから見つけたら、send gridに送る。
