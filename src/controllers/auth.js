@@ -1,8 +1,21 @@
 import User from '../models/user.js';
+import EmailAndPINcodeRelationship from '../models/emailAndPINcodeRelationship.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 import { AppError } from '../utils/AppError.js';
+// import mailgun from 'mailgun-js';
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use `true` for port 465, `false` for all other ports
+  auth: {
+    user: process.env.NODEMAILER_USER, // senderのgmailをここに（俺のgmailでとりあえず）
+    pass: process.env.NODEMAILER_PASSWORD,
+  },
+});
 
 export const signup = async (request, response, next) => {
   const { name, email, password } = request.body;
@@ -94,8 +107,6 @@ export const login = async (request, response, next) => {
 
 export const deleteMe = async (request, response, next) => {
   const { email, password } = request.body;
-  // console.log('data', data); // こういう、programmer errorに関するerror handlingどうしたらいいだろうね。。。
-
   const user = await User.findOne({ email });
 
   if (!user) {
@@ -123,6 +134,61 @@ export const registerPushToken = async (request, response) => {
     response.status(200).json({
       message: 'success',
     });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const forgotPassword = async (request, response) => {
+  try {
+    const { email } = request.body;
+    const user = await User.findOne({ email }); // userが見つかったら、emailとpinでrecordを作る感じ。
+    if (user) {
+      const pinCode = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setMinutes(now.getMinutes() + 30);
+      const emailAndPINRelationship = await EmailAndPINcodeRelationship.create({
+        email,
+        PINcode: pinCode,
+        createdAt: now,
+        expiresAt: expiresAt, // 30分後には使えないようにする。
+      });
+
+      const mailOptions = {
+        from: {
+          name: 'Mekka support',
+          address: process.env.NODEMAILER_USER,
+        },
+        to: user.email,
+        subject: `${user.name}, here's your PIN ${pinCode}`,
+        html: `
+          <h2>Hi ${user.name}.</h2>
+          <br>
+          <p>This is your temporary pin code.</p>
+          <br>
+          <h2>${pinCode}</h2>
+          <p>Please go back to Mekka, enter this pin and complete the reset.</p>
+          <br>
+          `,
+      };
+
+      await transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.log(error);
+        } else {
+          console.log('Email sent: ' + info.response);
+        }
+      });
+
+      response.status(200).json({
+        message: 'success',
+      });
+    } else {
+      response.status(200).json({
+        message: 'No user',
+      });
+    }
   } catch (error) {
     console.log(error);
   }
