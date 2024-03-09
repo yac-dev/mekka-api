@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 
-const emailAndPINcodeRelationship = mongoose.Schema({
+const emailAndPINCodeRelationshipSchema = mongoose.Schema({
   email: String,
-  PINcode: Number, // 6桁のコード
+  PINCode: Number, // 6桁のコード
   createdAt: Date,
   expiresAt: Date,
 });
 
-const EmailAndPINcodeRelationship = mongoose.model('EmailAndPINcodeRelationship', emailAndPINcodeRelationship);
+const EmailAndPINCodeRelationship = mongoose.model('EmailAndPINCodeRelationship', emailAndPINCodeRelationshipSchema);
 
-export default EmailAndPINcodeRelationship;
+export default EmailAndPINCodeRelationship;

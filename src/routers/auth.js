@@ -8,12 +8,14 @@ import {
   registerPushToken,
   forgotPassword,
   checkPINcode,
+  updatePassword,
 } from '../controllers/auth.js';
 import { authorization } from '../middlewares/authorization.js';
 
 router.route('/signup').post(signup);
 router.route('/login').post(login);
 router.route('/forgotPassword').post(forgotPassword);
+router.route('/newpassword').post(updatePassword);
 router.route('/checkpin').post(checkPINcode);
 router.get('/loadme', authorization, loadMe);
 router.route('/').delete(deleteMe);

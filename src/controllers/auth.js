@@ -1,5 +1,5 @@
 import User from '../models/user.js';
-import EmailAndPINcodeRelationship from '../models/emailAndPINcodeRelationship.js';
+import EmailAndPINCodeRelationship from '../models/emailAndPINCodeRelationship.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
@@ -143,13 +143,13 @@ export const forgotPassword = async (request, response, next) => {
   const { email } = request.body;
   const user = await User.findOne({ email }); // userが見つかったら、emailとpinでrecordを作る感じ。
   if (user) {
-    const pinCode = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+    const PINCode = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setMinutes(now.getMinutes() + 30);
-    const emailAndPINRelationship = await EmailAndPINcodeRelationship.create({
+    const emailAndPINRelationship = await EmailAndPINCodeRelationship.create({
       email,
-      PINcode: pinCode,
+      PINCode,
       createdAt: now,
       expiresAt: expiresAt, // 30分後には使えないようにする。
     });
@@ -160,13 +160,13 @@ export const forgotPassword = async (request, response, next) => {
         address: process.env.NODEMAILER_USER,
       },
       to: user.email,
-      subject: `${user.name}, here's your PIN ${pinCode}`,
+      subject: `${user.name}, here's your PIN ${PINCode}`,
       html: `
           <h2>Hi ${user.name}.</h2>
           <br>
           <p>This is your temporary pin code.</p>
           <br>
-          <h2>${pinCode}</h2>
+          <h2>${PINCode}</h2>
           <p>Please go back to Mekka, enter this pin and complete the reset.</p>
           <br>
           `,
@@ -190,11 +190,14 @@ export const forgotPassword = async (request, response, next) => {
 
 // pincodeのfield名ややこしいから変えよう。
 export const checkPINcode = async (request, response, next) => {
-  const { email, PINcode } = request.body;
-  const emailAndPINRelationship = await EmailAndPINcodeRelationship.findOne({ email, PINcode });
+  const { email, PINCode } = request.body;
+  const emailAndPINRelationship = await EmailAndPINCodeRelationship.findOne({ email, PINCode });
   if (emailAndPINRelationship) {
     response.status(200).json({
-      message: 'success',
+      status: 'success',
+      data: {
+        email,
+      },
     });
   } else {
     return next(new AppError("PIN code doesn't match...", 400));
@@ -204,19 +207,23 @@ export const checkPINcode = async (request, response, next) => {
 // ここ、pinまで着ないといけないようにしたいわな。middleware的な。。。
 // app側は、navigationで制御できるが、api側はまだだよな。。。
 export const updatePassword = async (request, response, next) => {
-  const { newPassword, email } = request.body;
-  if (newPassword.length < 10) {
+  console.log(request.body);
+  const { password, email } = request.body;
+  // console.log('input password', password);
+  // console.log('input email', email);
+  // emailがねーや。。。
+  if (password.length < 10) {
     return next(new AppError('Password has to be at least 10 characters long.', 400));
   }
 
   const user = await User.findOne({ email });
 
   const salt = await bcrypt.genSalt(10);
-  user.password = await bcrypt.hash(newPassword, salt);
+  user.password = await bcrypt.hash(password, salt);
   await user.save();
 
-  response.status(204).json({
-    message: 'success',
+  response.status(200).json({
+    status: 'success',
   });
 };
 
