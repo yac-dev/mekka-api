@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import { AppError } from '../utils/AppError.js';
-// import mailgun from 'mailgun-js';
+// import mailgun from 'mailgun-js'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
