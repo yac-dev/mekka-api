@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+// あれだ。error handlingだな。やるべきは。。。あとは、authorization
 mongoose
   .connect(process.env.MONGODB_URL, {
     useNewUrlParser: true,
