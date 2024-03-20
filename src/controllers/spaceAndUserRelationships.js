@@ -2,6 +2,7 @@ import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import SpaceUpdateLog from '../models/spaceUpdateLog.js';
 import mongoose from 'mongoose';
 
+//
 export const getMySpaces = async (request, response) => {
   try {
     const documents = await SpaceAndUserRelationship.find({
@@ -82,8 +83,9 @@ export const getMySpaces = async (request, response) => {
     console.log('updates', updateTable);
     // これを返す。
     // これを渡して、tagid propertyの合計値を無効で算出する。
+    const mySpaces = spaceAndUserRelationships.map((relationship) => relationship.space);
     response.status(200).json({
-      spaceAndUserRelationships,
+      mySpaces,
       updateTable,
     });
   } catch (error) {
