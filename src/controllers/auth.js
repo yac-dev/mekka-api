@@ -64,12 +64,14 @@ export const loadMe = async (request, response) => {
   response.status(200).json({
     status: 'success',
     data: {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-      pushToken: user.pushToken,
-      createdAt: user.createdAt,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        pushToken: user.pushToken,
+        createdAt: user.createdAt,
+      },
     },
   });
 };
