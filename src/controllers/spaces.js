@@ -43,6 +43,7 @@ export const createSpace = async (request, response) => {
     const isReactionAvailableValue = JSON.parse(isReactionAvailable);
     console.log(userData);
 
+    // --------------
     const randomString = generateRandomString(12);
     const space = new Space({
       name,
@@ -143,7 +144,6 @@ export const createSpace = async (request, response) => {
       createdAt: new Date(),
       lastCheckedIn: new Date(),
     });
-    space.save();
     await uploadIcon(request.file.filename);
     const hashTag = await Tag.find({ name: 'hash' });
 
@@ -160,9 +160,12 @@ export const createSpace = async (request, response) => {
       updatedAt: new Date(),
     });
 
+    space.tags = [tag._id];
+
+    space.save();
+    console.log('create space complete');
     response.status(201).json({
-      spaceAndUserRelationship: {
-        _id: spaceAndUserRelationship._id,
+      data: {
         space: {
           _id: space._id,
           name: space.name,
@@ -181,6 +184,7 @@ export const createSpace = async (request, response) => {
           totalPosts: space.totalPosts,
           totalMembers: space.totalMembers,
           rate: space.rate,
+          tags: [tag],
         },
       },
     });
@@ -318,7 +322,9 @@ export const getPostsBySpaceId = async (request, response) => {
 
 export const getPostsBySpaceIdAndYearAndMonth = async (request, response) => {
   try {
+    // これがいわゆるmoment postのことか。。。
     const { yearAndMonth } = request.params;
+    console.log(yearAndMonth);
     const year = yearAndMonth.split('-')[0];
     const month = yearAndMonth.split('-')[1];
 
@@ -352,7 +358,9 @@ export const getPostsBySpaceIdAndYearAndMonth = async (request, response) => {
     });
 
     response.status(200).json({
-      posts,
+      data: {
+        posts,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -366,7 +374,9 @@ export const getTagsBySpaceId = async (request, response) => {
       model: 'Icon',
     });
     response.status(200).json({
-      tags: tagDocuments,
+      data: {
+        tags: tagDocuments,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -418,6 +428,8 @@ export const getPeopleBySpaceId = async (request, response) => {
 export const joinPrivateSpaceBySecretKey = async (request, response) => {
   try {
     const { userId, secretKey } = request.body;
+    console.log('userId', userId);
+    console.log('secret key', secretKey);
     const space = await Space.findOne({ secretKey }).populate([
       {
         path: 'reactions',
@@ -432,8 +444,17 @@ export const joinPrivateSpaceBySecretKey = async (request, response) => {
         path: 'createdBy',
         select: '_id name avatar',
       },
+      ,
+      {
+        path: 'tags',
+        model: 'Tag',
+        populate: {
+          path: 'icon',
+        },
+      },
     ]);
     // 既にspaceに参加している場合は、エラーを返す。
+    console.log('space', space);
     const document = await SpaceAndUserRelationship.findOne({
       user: userId,
       space: space._id,
@@ -452,8 +473,7 @@ export const joinPrivateSpaceBySecretKey = async (request, response) => {
     }
 
     response.status(201).json({
-      spaceAndUserRelationship: {
-        _id: spaceAndUserRelationship._id,
+      data: {
         space,
       },
     });
