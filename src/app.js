@@ -21,6 +21,7 @@ import usersRouter from './routers/users.js';
 import postAndTagRelationshipsRouter from './routers/postAndTagRelationship.js';
 import userAndReactionRelationshipsRouter from './routers/userAndReactionRelationships.js';
 import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships.js';
+import logsRouter from './routers/logs.js';
 import { handleErrors } from './controllers/errors.js';
 
 const app = express();
@@ -45,6 +46,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/postandtagrelationships', postAndTagRelationshipsRouter);
 app.use('/api/userandreactionrelationships', userAndReactionRelationshipsRouter);
 app.use('/api/spaceanduserrelationships', spaceAndUserRelationshipsRouter);
+app.use('/api/logs', logsRouter);
 
 app.use(handleErrors);
 
