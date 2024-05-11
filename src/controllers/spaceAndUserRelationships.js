@@ -24,26 +24,11 @@ export const getMySpaces = async (request, response) => {
           path: 'createdBy',
           select: '_id name avatar',
         },
-        // {
-        //   path: 'tags',
-        //   model: 'Tag',
-        //   populate: {
-        //     path: 'icon',
-        //     model: 'Icon',
-        //   },
-        // },
       ],
     });
 
-    // 基本、clientに返す形としては
-
-    // みたいな感じのdata構造でユーザーに返す感じ。
-
-    // console.log(JSON.stringify(documents, null, 4));
-    // ここのfilterも微妙だな。。。
     const spaceAndUserRelationships = documents.filter((relationship) => relationship.space !== null);
     const mySpaces = spaceAndUserRelationships.map((relationship) => relationship.space);
-    // これでとってきたspaceのidで今度はtagを取ってくる。
     const spaceIds = spaceAndUserRelationships.map((relationship) => relationship.space._id);
     const tagDocuments = await Tag.find({ space: { $in: spaceIds } }).populate({
       path: 'icon',
@@ -51,7 +36,6 @@ export const getMySpaces = async (request, response) => {
     });
     const tagsBySpaceId = {};
 
-    // Loop through each tag document to group them by space ID
     for (const tag of tagDocuments) {
       const spaceId = tag.space.toString(); // Ensure the space ID is a string
       if (!tagsBySpaceId[spaceId]) {
@@ -60,78 +44,19 @@ export const getMySpaces = async (request, response) => {
       tagsBySpaceId[spaceId].push(tag);
     }
 
-    mySpaces.forEach((space) => {
+    const newMySpaces = mySpaces.map((space) => {
+      //NOTE const copied = {...space} //これだと、mongoの隠れたproperty福含め全部撮ってきちゃってる。。。面倒だ。。
+      const plainSpaceObject = space.toObject();
       const spaceId = space._id.toString();
-      space.tags = tagsBySpaceId[spaceId] || []; // Assign tags or an empty array if no tags exist
+      plainSpaceObject.tags = tagsBySpaceId[spaceId] || [];
+      return plainSpaceObject;
     });
 
     console.log('tagsBySpaceId', tagsBySpaceId);
 
-    // っていう感じでまとめて、それをmySpaces側に入れたいよな。
-
-    // tagDocumentsは撮ってきているからね。。。
-    // ここspaceに整形せなあかん。
-
-    // tagDocuments
-    // console.log('tags', tagDocuments);
-
-    // const queryBySpace = spaceAndUserRelationships.map((rel) => {
-    //   return {
-    //     space: rel.space._id,
-    //     lastCheckedIn: rel.lastCheckedIn,
-    //   };
-    // });
-
-    // const res = [];
-    // const spaceUpdates = await SpaceUpdateLog.find({});
-    // for (let i = 0; i < spaceUpdates.length; i++) {
-    //   for (let j = 0; j < queryBySpace.length; j++) {
-    //     if (
-    //       spaceUpdates[i].space.toString() === queryBySpace[j].space.toString() &&
-    //       spaceUpdates[i].updatedAt > queryBySpace[j].lastCheckedIn
-    //     ) {
-    //       res.push(spaceUpdates[i]);
-    //     }
-    //   }
-    // }
-
-    // // {spaceId2: {tagId1: 2, tagId3: 4}, spaceId3: {tagId34: 4, tagId9: 3}}
-
-    // // [ {space: 1, updatedAt: 12/01, updatedBy: 'user1', tagId: 1},
-    // //   {space: 1, updatedAt: 12/01, updatedBy: 'user1', tagId: 4} ]
-    // console.log('res', res);
-    // const updateTable = {};
-    // spaceAndUserRelationships.forEach((relationship) => {
-    //   updateTable[relationship.space._id] = {};
-    // });
-    // for (let i = 0; i < res.length; i++) {
-    //   if (updateTable[res[i].space]) {
-    //     // updateTable[res[i].space]++;
-    //     // 何もしない感じか。。。
-    //     if (updateTable[res[i].space][res[i].tag]) {
-    //       updateTable[res[i].space][res[i].tag]++;
-    //     } else {
-    //       updateTable[res[i].space][res[i].tag] = 1;
-    //     }
-    //   } else {
-    //     updateTable[res[i].space] = {};
-    //     updateTable[res[i].space][res[i].tag] = 1;
-    //     // if (updateTable[res[i].space][res[i].tag]) {
-    //     //   updateTable[res[i].space][res[i].tag]++;
-    //     // } else {
-    //     //   updateTable[res[i].space][res[i].tag] = 1;
-    //     // }
-    //     // updateTable[res[i].space] = 1;
-    //   }
-    // }
-    // console.log('updates', updateTable);
-    // これを返す。
-    // これを渡して、tagid propertyの合計値を無効で算出する。
-    // const mySpaces = spaceAndUserRelationships.map((relationship) => relationship.space);
-    // console.log('my spaces', mySpaces);
     response.status(200).json({
       data: {
-        mySpaces,
+        mySpaces: newMySpaces,
         // updateTable,
       },
     });
@@ -139,25 +64,6 @@ export const getMySpaces = async (request, response) => {
     console.log(error);
   }
 };
-
-// あのね、、、まずspaceAndUserRelを取ってくる
-// {space: '1', lastCheckedIn: '2023/12/11'}, {space: '2', lastCheckedIn: '2023/12/13'}
-// // 続いて、spaceUpdatesでは
-// {
-//   _id: new ObjectId("6587ef70a862860788842b00"),
-//   space: '1',
-//   updatedAt: 2023/12/12
-// },
-// {
-//   _id: new ObjectId("6587f0b6a862860788842b04"),
-//   space: '1'
-//   updatedAt: 12/14
-// },
-// {
-//   _id: new ObjectId("6587f12da862860788842b05"),
-//   space: '2'
-//   updatedAt: 2023/12/10
-// }
 
 export const updateSpaceLastCheckedIn = async (request, response) => {
   try {
