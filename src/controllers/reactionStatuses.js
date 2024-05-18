@@ -17,7 +17,9 @@ export const getReactionStatuses = async (request, response) => {
     });
 
     response.status(200).json({
-      reactionStatuses,
+      data: {
+        reactionStatuses,
+      },
     });
   } catch (error) {
     console.log(error);
