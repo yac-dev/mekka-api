@@ -4,6 +4,7 @@ import Content from '../models/content.js';
 import ReactionStatus from '../models/reactionStatus.js';
 import Comment from '../models/comment.js';
 import Tag from '../models/tag.js';
+import Log from '../models/log.js';
 import LocationTag from '../models/locationTag.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
 import SpaceUpdateLog from '../models/spaceUpdateLog.js';
@@ -506,6 +507,11 @@ export const createPost = async (request, response) => {
       createdTagDocuments.forEach((tagDocument) => {
         tagIds.push(tagDocument._id);
       });
+      // ここでspaceも更新しないといかんのか。
+      const space = await Space.findById(spaceId);
+      const createdTagIds = createdTagDocuments.map((tag) => tag._id);
+      space.tags.push(...createdTagIds);
+      space.save();
     }
 
     let addedExistingTags;
@@ -540,25 +546,35 @@ export const createPost = async (request, response) => {
       const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
     }
     // spaceのupdateLogを作る。
-    const spaceUpdateLog = await SpaceUpdateLog.create({
+    // const spaceUpdateLog = await SpaceUpdateLog.create({
+    //   space: spaceId,
+    //   post: post._id,
+    //   tag: tagIds[0],
+    //   createdBy: createdBy,
+    //   createdAt: new Date(),
+    // });
+    const log = await Log.create({
       space: spaceId,
+      type: 'normal',
+      post: post._id,
       tag: tagIds[0],
-      updatedBy: createdBy,
-      updatedAt: new Date(),
+      createdBy: createdBy,
+      createdAt: new Date(),
     });
+    // ここでspaceに関するlogを作る。
 
     // tagのupdate logを作る。
-    if (tagIds.length) {
-      const tagUpdateLogObjects = tagIds.map((tagId) => {
-        return {
-          tag: tagId,
-          updatedBy: createdBy,
-          updatedAt: new Date(),
-        };
-      });
+    // if (tagIds.length) {
+    //   const tagUpdateLogObjects = tagIds.map((tagId) => {
+    //     return {
+    //       tag: tagId,
+    //       updatedBy: createdBy,
+    //       updatedAt: new Date(),
+    //     };
+    //   });
 
-      const tagUpdateLogDocuments = await TagUpdateLog.insertMany(tagUpdateLogObjects);
-    }
+    //   const tagUpdateLogDocuments = await TagUpdateLog.insertMany(tagUpdateLogObjects);
+    // }
 
     // ---------------------
 
@@ -603,28 +619,173 @@ export const createPost = async (request, response) => {
     }
 
     response.status(201).json({
-      post: {
-        _id: post._id,
-        contents: contentDocuments,
-        type: post.type,
-        caption: post.caption,
-        space: spaceId,
-        // locationTag: addingLocationTag ? addingLocationTag._id : null,
-        createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
-        createdAt: post.createdAt,
-        disappearAt: post.disappearAt,
-        // content: {
-        //   data: contents[0].data,
-        //   type: contents[0].type,
-        // },
+      data: {
+        post: {
+          _id: post._id,
+          contents: contentDocuments,
+          type: post.type,
+          caption: post.caption,
+          space: spaceId,
+          // locationTag: addingLocationTag ? addingLocationTag._id : null,
+          createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
+          createdAt: post.createdAt,
+          disappearAt: post.disappearAt,
+          // content: {
+          //   data: contents[0].data,
+          //   type: contents[0].type,
+          // },
+        },
+        addedTags: [...parsedTags],
+        createdTags: tagObjects ? tagObjects : null,
       },
-      addedTags: [...parsedTags],
-      createdTags: tagObjects ? tagObjects : null,
     });
     // ---------------------
   } catch (error) {
     console.log(error);
     response.status(500).json({ error: 'An error occurred' });
+  }
+};
+
+export const createMoment = async (request, response) => {
+  try {
+    const { caption, createdBy, spaceId, reactions, contents, type, disappearAfter } = request.body;
+    console.log('got moment post request');
+    const createdAt = new Date();
+    const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
+    const parsedReactions = JSON.parse(reactions);
+    const files = request.files;
+    const contentIds = [];
+
+    const contentPromises = JSON.parse(contents).map(async (contentObject) => {
+      let fileName;
+      if (contentObject.type === 'photo') {
+        fileName = `${contentObject.fileName.split('.')[0]}.webp`;
+      } else if (contentObject.type === 'video') {
+        // --- ver1 ffmpeg通す時のやつ
+        // fileName = `optimized-${contentObject.fileName.split('.')[0]}.mp4`;
+        // -----
+        fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
+      }
+      const content = await Content.create({
+        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
+          contentObject.type === 'photo' ? 'photos' : 'videos'
+        }/${fileName}`,
+        type: contentObject.type,
+        duration: contentObject.duration,
+        createdBy,
+        createdAt,
+      });
+      contentIds.push(content._id);
+      // // ここでsharpしてoutputする必要があって、そのoutputをawsにあげるっていう流れだよな。
+      // await uploadPhoto(content.fileName, content.type);
+      // return content;
+      // ここで場合わけをするか。photoかvideoか。
+      if (contentObject.type === 'photo') {
+        const sharpedImageBinary = await sharpImage(contentObject.fileName);
+        await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
+        return content;
+      } else if (contentObject.type === 'video') {
+        // --- ver1
+        // ffmpegを通して、
+        const outputFileName = `optimized-${contentObject.fileName}`;
+        const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
+        const fileStream = fs.createReadStream(optimizedVideoFilePath);
+        // awsにuploadする。
+        await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
+        await unlinkFile(optimizedVideoFilePath);
+        return content;
+        // ---
+
+        // ver2
+        // await uploadVideo(contentObject.fileName);
+        // return content;
+      }
+    });
+
+    const contentDocuments = await Promise.all(contentPromises);
+    const post = await Post.create({
+      contents: contentIds,
+      type,
+      caption,
+      space: spaceId,
+      disappearAt: type === 'moment' ? disappearAt : null,
+      createdBy,
+      createdAt,
+    });
+
+    // 3 reactionのstatusを作る。
+    const reacionStatusObjects = parsedReactions.map((reactionId) => {
+      return {
+        post: post._id,
+        reaction: reactionId,
+        count: 0,
+      };
+    });
+    const reactionAndStatuses = await ReactionStatus.insertMany(reacionStatusObjects);
+
+    // const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
+    //   space: spaceId,
+    //   user: { $ne: createdBy },
+    // })
+    //   .populate({ path: 'user' })
+    //   .select({ pushToken: 1 });
+    // const membersPushTokens = spaceAndUserRelationships.map((rel) => {
+    //   return rel.user.pushToken;
+    // });
+
+    // let notificationTitle = '';
+
+    // const notificationData = {
+    //   notificationType: 'Post',
+    //   spaceId: spaceId,
+    //   tagId: tagIds[0],
+    // };
+
+    // const chunks = expo.chunkPushNotifications(
+    //   membersPushTokens.map((token) => ({
+    //     to: token,
+    //     sound: 'default',
+    //     data: notificationData,
+    //     title: 'Member has posted.',
+    //     body: caption,
+    //   }))
+    // );
+
+    // const tickets = [];
+
+    // for (let chunk of chunks) {
+    //   try {
+    //     let receipts = await expo.sendPushNotificationsAsync(chunk);
+    //     tickets.push(...receipts);
+    //     console.log('Push notifications sent:', receipts);
+    //   } catch (error) {
+    //     console.error('Error sending push notification:', error);
+    //   }
+    // }
+    const log = await Log.create({
+      space: spaceId,
+      type: 'moment',
+      post: post._id,
+      createdBy: createdBy,
+      createdAt: new Date(),
+    });
+
+    response.status(201).json({
+      data: {
+        post: {
+          _id: post._id,
+          contents: contentDocuments,
+          type: post.type,
+          caption: post.caption,
+          space: spaceId,
+          createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
+          createdAt: post.createdAt,
+          disappearAt: post.disappearAt,
+        },
+      },
+    });
+  } catch (error) {
+    throw error;
   }
 };
 
@@ -655,6 +816,7 @@ export const getPostsByTagId = async (request, response) => {
   try {
     const now = new Date(new Date().getTime());
     const page = request.query.page;
+    let nextPage = null;
     const limitPerPage = 12;
     const sortingCondition = { _id: 1 };
     const postAndTagRelationships = await PostAndTagRelationship.find({
@@ -704,8 +866,14 @@ export const getPostsByTagId = async (request, response) => {
 
     // console.log('these are posts', posts);
     console.log('posts', posts);
+    if (posts.length) {
+      nextPage = page + 1;
+    }
     response.status(200).json({
-      posts,
+      data: {
+        posts,
+        nextPage,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -772,7 +940,9 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
     console.log('fetched by map', posts);
 
     response.status(200).json({
-      posts: returning,
+      data: {
+        posts: returning,
+      },
     });
     // const posts = postAndTagRelationships
     //   .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
@@ -864,7 +1034,31 @@ export const getCommentsByPostId = async (request, response) => {
     console.log('comments here', comments);
 
     response.status(200).json({
-      comments,
+      data: {
+        comments,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getMomentPostsBySpaceId = async (request, response) => {
+  try {
+    const now = new Date(new Date().getTime());
+    const posts = await Post.find({ space: request.params.spaceId, disappearAt: { $gt: now } }).populate([
+      {
+        path: 'contents',
+        model: 'Content',
+      },
+      { path: 'createdBy', model: 'User', select: '_id name avatar' },
+    ]);
+    console.log('moments post');
+
+    response.status(200).json({
+      data: {
+        posts,
+      },
     });
   } catch (error) {
     console.log(error);

@@ -17,7 +17,9 @@ export const getUsersBySpaceId = async (request, response) => {
     console.log(users);
 
     response.status(200).json({
-      users,
+      data: {
+        users,
+      },
     });
   } catch (error) {
     console.log(error);
