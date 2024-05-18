@@ -45,6 +45,12 @@ const spaceSchema = mongoose.Schema({
   },
   createdAt: Date,
   updatedAt: Date, //　こんな感じで行きたいわけで。。。
+  // tags: [
+  //   {
+  //     type: mongoose.Schema.ObjectId,
+  //     ref: 'Tag',
+  //   },
+  // ],
 });
 
 const Space = mongoose.model('Space', spaceSchema);

@@ -5,15 +5,19 @@ const spaceUpdateLogSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'Space',
   },
+  post: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Post',
+  },
   tag: {
     type: mongoose.Schema.ObjectId,
     ref: 'Tag',
   }, // これでtagの数なんかもあのdsでまとめてユーザーに返すことになる。
-  updatedBy: {
+  createdBy: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
   },
-  updatedAt: Date,
+  createdAt: Date,
 });
 
 // 通知システムの順序としてはこんな感じ。
