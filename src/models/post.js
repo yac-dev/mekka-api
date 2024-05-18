@@ -7,7 +7,7 @@ const postSchema = mongoose.Schema({
     enum: ['normal', 'moment'],
   },
   caption: String,
-  locationTag: { type: mongoose.Schema.ObjectId, ref: 'LocationTag' }, // これは一つのみ。
+  // locationTag: { type: mongoose.Schema.ObjectId, ref: 'LocationTag' }, // これは一つのみ。
   space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
   createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
   createdAt: Date,
