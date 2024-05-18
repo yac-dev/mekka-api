@@ -46,13 +46,12 @@ export const getMySpaces = async (request, response) => {
 
     const newMySpaces = mySpaces.map((space) => {
       //NOTE const copied = {...space} //これだと、mongoの隠れたproperty福含め全部撮ってきちゃってる。。。面倒だ。。
+      // ここ、ちょうどいい勉強材料になるな。。
       const plainSpaceObject = space.toObject();
       const spaceId = space._id.toString();
       plainSpaceObject.tags = tagsBySpaceId[spaceId] || [];
       return plainSpaceObject;
     });
-
-    console.log('tagsBySpaceId', tagsBySpaceId);
 
     response.status(200).json({
       data: {

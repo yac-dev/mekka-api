@@ -35,12 +35,15 @@ export const getSpaceUpdates = async (request, response) => {
         lastCheckedIn: spaceAndUserRelationship.lastCheckedIn,
       };
     });
+
     const queryConditions = spaceObjects.map(({ space, lastCheckedIn }) => ({
       space: space,
-      createdBy: userId,
+      // createdBy: userId,
       createdAt: { $gt: lastCheckedIn },
     }));
     const logDocuments = await Log.find({ $or: queryConditions });
+
+    console.log('log docs', logDocuments);
 
     const logs = aggregateLogsBySpaceAndTag(logDocuments);
 
