@@ -145,13 +145,14 @@ export const createSpace = async (request, response) => {
       lastCheckedIn: new Date(),
     });
     await uploadIcon(request.file.filename);
-    const hashTag = await Tag.find({ name: 'hash' });
+    const hashTagIcon = await Icon.findOne({ name: 'hash' });
+    //　確かに、作ったあとはもってこれないやシンプルに。
 
     // tagを作るだけでいいのかね。もしかしたら。
     // tagの数は、結構多くの数になる。spaceが全部持っておくのはベストではないだろう。それよりも、他にdelegateする方がいい。
     const tag = await Tag.create({
       iconType: 'icon',
-      icon: hashTag._id,
+      icon: hashTagIcon._id,
       name: 'general',
       color: 'white',
       count: 1,
@@ -160,10 +161,7 @@ export const createSpace = async (request, response) => {
       updatedAt: new Date(),
     });
 
-    space.tags = [tag._id];
-
-    space.save();
-    console.log('create space complete');
+    const responsingTag = space.save();
     response.status(201).json({
       data: {
         space: {
@@ -184,7 +182,17 @@ export const createSpace = async (request, response) => {
           totalPosts: space.totalPosts,
           totalMembers: space.totalMembers,
           rate: space.rate,
-          tags: [tag],
+          tags: [
+            {
+              iconType: tag.iconType,
+              icon: hashTagIcon,
+              name: tag.name,
+              color: tag.color,
+              space: tag.space,
+              createdBy: tag.createdBy,
+              updatedAt: tag.updated,
+            },
+          ],
         },
       },
     });
@@ -237,7 +245,9 @@ export const getSpaces = async (request, response) => {
         },
       });
     response.status(200).json({
-      spaces,
+      data: {
+        spaces,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -262,7 +272,9 @@ export const getSpaceById = async (request, response) => {
       });
     console.log('hi');
     response.status(200).json({
-      space,
+      data: {
+        space,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -444,15 +456,12 @@ export const joinPrivateSpaceBySecretKey = async (request, response) => {
         path: 'createdBy',
         select: '_id name avatar',
       },
-      ,
-      {
-        path: 'tags',
-        model: 'Tag',
-        populate: {
-          path: 'icon',
-        },
-      },
     ]);
+
+    const tags = await Tag.find({ space: space._id }).populate({
+      path: 'icon',
+      model: 'Icon',
+    });
     // 既にspaceに参加している場合は、エラーを返す。
     console.log('space', space);
     const document = await SpaceAndUserRelationship.findOne({
@@ -474,7 +483,26 @@ export const joinPrivateSpaceBySecretKey = async (request, response) => {
 
     response.status(201).json({
       data: {
-        space,
+        space: {
+          _id: space._id,
+          name: space.name,
+          icon: space.icon,
+          contentType: space.contentType,
+          description: space.description,
+          secretKey: space.secretKey,
+          isPublic: space.isPublic,
+          isCommentAvailable: space.isCommentAvailable,
+          isReactionAvailable: space.isReactionAvailable,
+          videoLength: space.videoLength,
+          disappearAfter: space.disappearAfter,
+          reactions: space.reactions,
+          createdBy: space.createdBy,
+          createdAt: space.createdAt,
+          totalPosts: space.totalPosts,
+          totalMembers: space.totalMembers,
+          rate: space.rate,
+          tags: tags,
+        },
       },
     });
   } catch (error) {
@@ -487,15 +515,18 @@ export const joinPrivateSpaceBySecretKey = async (request, response) => {
 
 export const joinPublicSpace = async (request, response) => {
   try {
-    const { space, userId } = request.body;
-    const spaceAndUserRelationship = await SpaceAndUserRelationship.create({
+    const { userId } = request.body;
+    const { spaceId } = request.params;
+    // const doc = await SpaceAndUserRelationship.findOne({space: spaceId})
+
+    await SpaceAndUserRelationship.create({
       user: userId,
       space: request.params.spaceId,
       createdAt: new Date(),
       lastCheckedIn: new Date(),
     });
 
-    const spaceDocument = await Space.findById(space._id).populate([
+    const space = await Space.findById(spaceId).populate([
       {
         path: 'reactions',
         select: '_id type emoji sticker',
@@ -511,11 +542,55 @@ export const joinPublicSpace = async (request, response) => {
       },
     ]);
 
+    const tags = await Tag.find({ space: spaceId }).populate({
+      path: 'icon',
+      model: 'Icon',
+    });
+
     response.status(201).json({
-      spaceAndUserRelationship: {
-        _id: spaceAndUserRelationship._id,
-        space: spaceDocument,
+      data: {
+        space: {
+          _id: space._id,
+          name: space.name,
+          icon: space.icon,
+          contentType: space.contentType,
+          description: space.description,
+          secretKey: space.secretKey,
+          isPublic: space.isPublic,
+          isCommentAvailable: space.isCommentAvailable,
+          isReactionAvailable: space.isReactionAvailable,
+          videoLength: space.videoLength,
+          disappearAfter: space.disappearAfter,
+          reactions: space.reactions,
+          createdBy: space.createdBy,
+          createdAt: space.createdAt,
+          totalPosts: space.totalPosts,
+          totalMembers: space.totalMembers,
+          rate: space.rate,
+          tags: tags,
+        },
       },
+      // tagsもfetchしてこんといかん。
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const updateSpaceCheckedInDate = async (request, response) => {
+  try {
+    const { spaceId, userId } = request.params;
+    const spaceAndUserRelationship = await SpaceAndUserRelationship.findOne({
+      user: userId,
+      space: spaceId,
+    });
+
+    spaceAndUserRelationship.lastCheckedIn = new Date();
+    spaceAndUserRelationship.save();
+
+    console.log('now updated -> ', new Date());
+    response.status(200).json({
+      message: 'success', // 何も返す必要はないかな。
     });
   } catch (error) {
     console.log(error);
