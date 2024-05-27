@@ -11,6 +11,7 @@ import {
   getPeopleBySpaceId,
   joinPrivateSpaceBySecretKey,
   joinPublicSpace,
+  updateSpaceCheckedInDate,
 } from '../controllers/spaces.js';
 import multerParser from '../middlewares/multer.js';
 
@@ -23,6 +24,7 @@ router.route('/:spaceId/people').get(getPeopleBySpaceId);
 router.route('/:spaceId/locationtags').get(getLocationTagsBySpaceId);
 router.route('/:spaceId/public').post(joinPublicSpace);
 router.route('/private').post(joinPrivateSpaceBySecretKey);
+router.route('/:spaceId/:userId/checkedin').patch(updateSpaceCheckedInDate);
 // router.route('/:spaceId/posts'); //ここで、tagのidがっていうfilterをつけるかね？
 
 export default router;
