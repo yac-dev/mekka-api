@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2020", // Compile to a version of ECMAScript that supports async/await
+    "module": "ESNext", // Use ES modules
+    "moduleResolution": "node", // Module resolution strategy
+    "outDir": "./dist", // Output directory for compiled files
+    "rootDir": "./src", // Root directory of the source files
+    "strict": true, // Enable all strict type-checking options
+    "esModuleInterop": true, // Enables compatibility with non-ES module spec compliant imports
+    "skipLibCheck": true, // Skip type checking of all declaration files (*.d.ts)
+    "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file.
+    "resolveJsonModule": true, // Allow importing .json files
+    "allowSyntheticDefaultImports": true // Allow default imports from modules with no default export
+  },
+  "include": [
+    "src/**/*" // Include all files in the src directory
+  ],
+  "exclude": [
+    "node_modules", // Exclude the node_modules directory
+    "**/*.test.ts" // Exclude test files
+  ]
+}

@@ -5,8 +5,10 @@
   "author": "Yosuke Kojima ",
   "main": "src/index.js",
   "scripts": {
-    "start": "NODE_ENV=production node --es-module-specifier-resolution=node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "NODE_ENV=production node --es-module-specifier-resolution=node dist/index.js",
+    "build": "tsc",
+    "dev": "env-cmd -f ./config/.env.devnodemon --exec ts-node --es-module-specifier-resolution=node src/index.ts",
     "server:dev": "env-cmd -f ./config/.env.dev nodemon --es-module-specifier-resolution=node src/index.js",
     "server:staging": "NODE_ENV=staging node --es-module-specifier-resolution=node src/index.js",
     "server:production": "NODE_ENV=production node --es-module-specifier-resolution=node src/index.js",
@@ -39,6 +41,14 @@
     "validator": "^13.11.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.13.0",
+    "@types/nodemailer": "^6.4.15",
+    "@types/validator": "^13.11.10",
+    "nodemon": "^2.0.22",
+    "typescript": "^5.4.5"
   }
 }

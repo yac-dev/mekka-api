@@ -1,9 +1,24 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
+import { Schema, model, Document, Model } from 'mongoose';
+
+type IUser = {
+  name: string;
+  email: string;
+  password: string;
+  avatar?: string;
+  pushToken?: string;
+  createdAt: Date;
+  isPasswordCorrect(enteredPassword: string, actualPassword: string): Promise<boolean>;
+} & Document;
+
+// schemaと実際のuserの形っって変わるもんな。。。そこを考えないとな。。。
+
+type UserModel = Model<IUser>;
 
 // schemaのエラーってどう扱ったらいい？ここでエラーが起きても、handlerでエラーをあつかってくれねーんだよな。。。
-const userSchema = mongoose.Schema({
+const userSchema = new Schema<IUser, UserModel>({
   name: {
     type: String,
     required: [true, 'Please provide your name.'],
@@ -11,9 +26,9 @@ const userSchema = mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Please provide your email.'],
-    unique: [true, 'This email has already been taken.'],
+    unique: true,
     lowercase: true,
-    validate: [validator.isEmail, 'Please provide the valid email.'],
+    validate: [validator.isEmail, 'Please provide a valid email.'],
   },
   password: {
     type: String,
@@ -28,15 +43,17 @@ const userSchema = mongoose.Schema({
   },
   avatar: String, // s3 link
   pushToken: String,
-  createdAt: Date,
+  createdAt: {
+    type: Date,
+    required: true,
+  },
 });
 
 // userSchema.set('toJSON', { virtuals: true });
 // userSchema.set('toObject', { virtuals: true });
 
-userSchema.methods.isPasswordCorrect = async (enteredPassword, actualPassword) => {
+userSchema.methods.isPasswordCorrect = async (enteredPassword: string, actualPassword: string) => {
   return await bcrypt.compare(enteredPassword, actualPassword);
 };
 
-const User = mongoose.model('User', userSchema);
-export default User;
+export const User = model<IUser, UserModel>('User', userSchema);
