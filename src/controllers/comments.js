@@ -15,8 +15,6 @@ export const createComment = async (request, response) => {
     const post = await Post.find({ _id: request.body.postId }).populate({
       path: 'createdBy',
     });
-    post.totalComments++;
-    post.save();
 
     // ---
     let notificationTitle = '';
@@ -49,39 +47,39 @@ export const createComment = async (request, response) => {
     //   // これあれか、notificationのdocumentも作らないといけない感じか。。。
     //   // commentとreactionの時にnotificationのdocumentを作って、
     // }
-    if (post.createdBy.pushToken) {
-      console.log('token', post.createdBy.pushToken);
-      if (!Expo.isExpoPushToken(post.createdBy.pushToken)) {
-        console.error(`expo-push-token is not a valid Expo push token`);
-      }
-      const notifyMessage = {
-        to: post.createdBy.pushToken,
-        sound: 'default',
-        data: notificationData,
-        title: 'Got comment',
-        body: 'Got comment',
-      };
-      const messages = [];
-      messages.push(notifyMessage);
-      const chunks = expo.chunkPushNotifications(messages);
+    // if (post.createdBy.pushToken) {
+    //   console.log('token', post.createdBy.pushToken);
+    //   if (!Expo.isExpoPushToken(post.createdBy.pushToken)) {
+    //     console.error(`expo-push-token is not a valid Expo push token`);
+    //   }
+    //   const notifyMessage = {
+    //     to: post.createdBy.pushToken,
+    //     sound: 'default',
+    //     data: notificationData,
+    //     title: 'Got comment',
+    //     body: 'Got comment',
+    //   };
+    //   const messages = [];
+    //   messages.push(notifyMessage);
+    //   const chunks = expo.chunkPushNotifications(messages);
 
-      const tickets = [];
+    //   const tickets = [];
 
-      try {
-        (async () => {
-          for (const chunk of chunks) {
-            try {
-              const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-              tickets.push(...ticketChunk);
-            } catch (error) {
-              console.error(error);
-            }
-          }
-        })();
-      } catch (error) {
-        console.error(error);
-      }
-    }
+    //   try {
+    //     (async () => {
+    //       for (const chunk of chunks) {
+    //         try {
+    //           const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+    //           tickets.push(...ticketChunk);
+    //         } catch (error) {
+    //           console.error(error);
+    //         }
+    //       }
+    //     })();
+    //   } catch (error) {
+    //     console.error(error);
+    //   }
+    // }
 
     response.status(201).json({
       comment,
@@ -99,7 +97,9 @@ export const getComments = async (request, response) => {
       { path: 'reply', model: 'Comment' },
     ]);
     response.status(200).json({
-      comments,
+      data: {
+        comments,
+      },
     });
   } catch (error) {
     console.log(error);
