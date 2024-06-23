@@ -818,7 +818,7 @@ export const getPostsByTagId = async (request, response) => {
     const page = request.query.page;
     let nextPage = null;
     const limitPerPage = 12;
-    const sortingCondition = { _id: 1 };
+    const sortingCondition = { _id: -1 };
     const postAndTagRelationships = await PostAndTagRelationship.find({
       tag: request.params.tagId,
       // post: { $ne: null },  // これ意味ない。結局、mongoにはrdbmsにおけるjoin的な機能を持ち合わせていないから。
