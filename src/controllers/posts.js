@@ -815,9 +815,9 @@ export const getPost = async (request, response) => {
 export const getPostsByTagId = async (request, response) => {
   try {
     const now = new Date(new Date().getTime());
-    const page = request.query.page;
-    let nextPage = null;
-    const limitPerPage = 12;
+    const page = Number(request.query.page);
+    let hasNextPage = true;
+    const limitPerPage = 100;
     const sortingCondition = { _id: -1 };
     const postAndTagRelationships = await PostAndTagRelationship.find({
       tag: request.params.tagId,
@@ -865,14 +865,12 @@ export const getPostsByTagId = async (request, response) => {
       .filter((relationship) => relationship);
 
     // console.log('these are posts', posts);
-    console.log('posts', posts);
-    if (posts.length) {
-      nextPage = page + 1;
-    }
+    if (!posts.length) hasNextPage = false;
     response.status(200).json({
       data: {
         posts,
-        nextPage,
+        currentPage: page + 1,
+        hasNextPage,
       },
     });
   } catch (error) {
@@ -890,17 +888,17 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
     const maxLng = longitude + longitudeDelta / 2;
     const now = new Date(new Date().getTime());
 
-    console.log('min lat -> ', minLat);
-    console.log('max lat -> ', maxLat);
-    console.log('min lng -> ', minLng);
-    console.log('max lng -> ', maxLng);
+    // console.log('min lat -> ', minLat);
+    // console.log('max lat -> ', maxLat);
+    // console.log('min lng -> ', minLng);
+    // console.log('max lng -> ', maxLng);
 
     const postAndTagRelationships = await PostAndTagRelationship.find({
       tag: request.params.tagId,
     });
-    console.log('tag id -> ', request.params.tagId);
+    // console.log('tag id -> ', request.params.tagId);
     const postIds = postAndTagRelationships.map((rel) => rel.post);
-    console.log(postIds);
+    // console.log(postIds);
     const posts = await Post.find({
       _id: { $in: postIds },
       'location.coordinates': {
@@ -937,7 +935,7 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
     //     ],
     //   },
     // },
-    console.log('fetched by map', posts);
+    // console.log('fetched by map', posts);
 
     response.status(200).json({
       data: {
