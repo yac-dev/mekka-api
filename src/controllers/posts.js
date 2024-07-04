@@ -24,42 +24,6 @@ const expo = new Expo();
 const unlinkFile = util.promisify(fs.unlink);
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
-
-const sharpImage = async (inputFileName) => {
-  const __dirname = path.resolve();
-  const fileInput = path.join(__dirname, 'buffer', inputFileName);
-  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
-  const outputPath = path.join(__dirname, 'buffer', outputFileName);
-  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
-  const processed = await sharp(fileInput)
-    .resize(700)
-    .webp({ quality: 1 })
-    // .toFile(outputPath)
-    .toBuffer((err, data) => console.log('finished...'));
-  return processed;
-};
-
-const optimizeVideo = (originalFileName, newFileName) => {
-  const compressOptions = {
-    videoCodec: 'libx264', // 使用するビデオコーデック
-    audioCodec: 'aac', // 使用するオーディオコーデック
-    size: '990x540', // 出力動画の解像度
-  };
-  const __dirname = path.resolve();
-  const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
-  const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
-  return new Promise((resolve, reject) => {
-    exec(command, (err, stdout, stderr) => {
-      if (err) console.log('Error ', err);
-      else {
-        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
-        resolve(outputFilePath);
-      }
-    });
-  });
-};
-
 // const optimizeVideo = (originalFileName, newFileName) => {
 //   const compressOptions = {
 //     videoCodec: 'libx264', // 使用するビデオコーデック
@@ -91,9 +55,46 @@ const optimizeVideo = (originalFileName, newFileName) => {
 // videoの場合は、ffmpeg通さないといけないから。
 // s3にも、これで入れられるのかみたいね。これ使えたら今までの無茶苦茶面倒臭いの全部なくなるから。。。
 
+const sharpImage = async (inputFileName) => {
+  const __dirname = path.resolve();
+  const fileInput = path.join(__dirname, 'buffer', inputFileName);
+  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
+  const outputPath = path.join(__dirname, 'buffer', outputFileName);
+  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
+  const processed = await sharp(fileInput)
+    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
+    .resize({ height: 1920, width: 1080, fit: 'contain' })
+    .webp({ quality: 1 })
+    .toBuffer();
+  return processed;
+};
+
+// ここもできれば、memory内で済ませたいができるんだろうか・・・？
+const optimizeVideo = (originalFileName, newFileName) => {
+  const compressOptions = {
+    videoCodec: 'libx264', // 使用するビデオコーデック
+    audioCodec: 'aac', // 使用するオーディオコーデック
+    size: '990x540', // 出力動画の解像度
+  };
+  const __dirname = path.resolve();
+  const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
+  const outputFilePath = path.join(__dirname, 'buffer', newFileName);
+  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
+  return new Promise((resolve, reject) => {
+    exec(command, (err, stdout, stderr) => {
+      if (err) console.log('Error ', err);
+      else {
+        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
+        resolve(outputFilePath);
+      }
+    });
+  });
+};
+
+const processVideo = () => {};
+
 export const experiment = async (request, response) => {
   try {
-    // 本当は、signedURLを発行してそのurlをclientに返すのがいいっぽいね。
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
     const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
@@ -108,30 +109,65 @@ export const experiment = async (request, response) => {
       },
       region: bucketRegion,
     });
-
-    // console.log(request.file);
-
     const sharpedBuffer = await sharp(request.file.buffer)
       .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
       .resize({ height: 1920, width: 1080, fit: 'contain' })
       .webp({ quality: 1 })
       .toBuffer();
+    console.log(sharpedBuffer);
 
-    const params = {
-      Bucket: bucketName,
-      Key: imageName(),
-      Body: sharpedBuffer,
-      ContentType: request.file.mimetype,
-    };
-    // diskStorage使わないの最高じゃん。てかあの人なんでこっちを紹介しなかった？？
-    const command = new PutObjectCommand(params);
-    await s3.send(command);
-    // const sharpedImageBinary = await sharpImage(contentObject.fileName);
-    // const __dirname = path.resolve();
-    // const fileInput = path.join(__dirname, 'buffer', request.file.filename);
-    // const outputFileName = `${request.file.filename.split('.')[0]}.webp`;
-    // const outputPath = path.join(__dirname, 'buffer', outputFileName);
-    // const processed = await sharp(fileInput).resize(700).webp({ quality: 1 }).toFile(outputPath);
+    // const params = {
+    //   Bucket: bucketName,
+    //   Key: imageName(),
+    //   Body: sharpedBuffer,
+    //   ContentType: request.file.mimetype,
+    // };
+    // const command = new PutObjectCommand(params);
+    // await s3.send(command);
+
+    response.status(201).json({
+      message: 'success',
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const optimizeVideoNew = (inputBuffer) => {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const ffmpegCommand = ffmpeg(inputBuffer)
+      .inputFormat('mp4') // Ensure the input format is specified
+      .videoCodec('libx264')
+      .audioCodec('aac')
+      .size('990x540')
+      .on('error', (err) => reject(err))
+      .on('end', () => resolve(Buffer.concat(chunks)))
+      .pipe();
+
+    ffmpegCommand.on('data', (chunk) => chunks.push(chunk));
+  });
+};
+
+export const experimentVideo = async (request, response) => {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
+    const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
+    const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
+
+    const videoName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
+
+    const s3 = new S3Client({
+      credentials: {
+        accessKeyId: bucketAccessKey,
+        secretAccessKey: bucketSecretKey,
+      },
+      region: bucketRegion,
+    });
+
+    const optimizedVideo = await optimizeVideoNew(request.file.buffer);
+    console.log(optimizedVideo);
 
     response.status(201).json({
       message: 'success',
@@ -596,35 +632,39 @@ export const getPostsByTagId = async (request, response) => {
       });
     // console.log(postAndTagRelationships);
 
-    const posts = postAndTagRelationships
-      .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
-      .map((relationship, index) => {
-        // console.log(relationship.post);
-        if (
-          relationship.post.type === 'normal' ||
-          (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
-        ) {
-          return {
-            _id: relationship.post._id,
-            contents: relationship.post.contents,
-            type: relationship.post.type,
-            caption: relationship.post.caption,
-            locationTag: relationship.post.locationTag,
-            createdAt: relationship.post.createdAt,
-            createdBy: relationship.post.createdBy,
-            disappearAt: relationship.post.disappearAt,
-            totalComments: relationship.post.totalComments,
-            totalReactions: relationship.post.totalReactions,
-          };
-        }
-      })
-      .filter((relationship) => relationship);
+    const posts = await Promise.all(
+      postAndTagRelationships
+        .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
+        .map(async (relationship) => {
+          if (
+            relationship.post.type === 'normal' ||
+            (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
+          ) {
+            const totalComments = await Comment.countDocuments({ post: relationship.post._id });
+            // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+            return {
+              _id: relationship.post._id,
+              contents: relationship.post.contents,
+              type: relationship.post.type,
+              caption: relationship.post.caption,
+              locationTag: relationship.post.locationTag,
+              createdAt: relationship.post.createdAt,
+              createdBy: relationship.post.createdBy,
+              disappearAt: relationship.post.disappearAt,
+              totalComments,
+              // totalReactions,
+            };
+          }
+        })
+    );
+
+    const filteredPosts = posts.filter((post) => post);
 
     // console.log('these are posts', posts);
     if (!posts.length) hasNextPage = false;
     response.status(200).json({
       data: {
-        posts,
+        posts: filteredPosts,
         currentPage: page + 1,
         hasNextPage,
       },
