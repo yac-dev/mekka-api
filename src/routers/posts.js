@@ -11,6 +11,7 @@ import {
   getPostsByLocationTagId,
   getCommentsByPostId,
   experiment,
+  experimentVideo,
   getMomentPostsBySpaceId,
 } from '../controllers/posts.js';
 import { multerParserInMemory } from '../middlewares/multerMemory.js';
@@ -18,6 +19,7 @@ import { multerParserInMemory } from '../middlewares/multerMemory.js';
 router.route('/').post(multerParser.array('bufferContents', 10), createPost);
 router.route('/moment').post(multerParser.array('bufferContents', 10), createMoment);
 router.route('/experiment').post(multerParserInMemory.single('experiment'), experiment);
+router.route('/experiment/video').post(multerParserInMemory.single('experiment'), experimentVideo);
 // multi-partのkey名はclient側のnameと必ず一致していること。
 router.route('/:postId').get(getPost);
 router.route('/:postId/comments').get(getCommentsByPostId);
