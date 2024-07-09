@@ -24,6 +24,7 @@ const expo = new Expo();
 const unlinkFile = util.promisify(fs.unlink);
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 // const optimizeVideo = (originalFileName, newFileName) => {
 //   const compressOptions = {
 //     videoCodec: 'libx264', // 使用するビデオコーデック
@@ -628,9 +629,9 @@ export const getPostsByTagId = async (request, response) => {
             model: 'Content',
           },
           { path: 'createdBy', model: 'User', select: '_id name avatar' },
+          { path: 'space', model: 'Space', select: 'reactions' },
         ],
       });
-    // console.log(postAndTagRelationships);
 
     const posts = await Promise.all(
       postAndTagRelationships
@@ -642,6 +643,9 @@ export const getPostsByTagId = async (request, response) => {
           ) {
             const totalComments = await Comment.countDocuments({ post: relationship.post._id });
             // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+            const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
+              post: relationship.post._id,
+            });
             return {
               _id: relationship.post._id,
               contents: relationship.post.contents,
@@ -652,15 +656,16 @@ export const getPostsByTagId = async (request, response) => {
               createdBy: relationship.post.createdBy,
               disappearAt: relationship.post.disappearAt,
               totalComments,
-              // totalReactions,
+              totalReactions,
             };
           }
         })
     );
 
+    // 一応, totalReactionsは撮ってこれるようになったね。
+
     const filteredPosts = posts.filter((post) => post);
 
-    // console.log('these are posts', posts);
     if (!posts.length) hasNextPage = false;
     response.status(200).json({
       data: {

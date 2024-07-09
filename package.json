@@ -11,7 +11,8 @@
     "server:staging": "NODE_ENV=staging node --es-module-specifier-resolution=node src/index.js",
     "server:staging-ec2": "env-cmd -f ./.env node --es-module-specifier-resolution=node src/index.js",
     "server:production": "NODE_ENV=production node --es-module-specifier-resolution=node src/index.js",
-    "vercel-build": "echo hello vercel"
+    "vercel-build": "echo hello vercel",
+    "console": "node run console"
   },
   "type": "module",
   "keywords": [],
@@ -32,6 +33,7 @@
     "form-data": "^4.0.0",
     "jsonwebtoken": "^9.0.1",
     "mailgun.js": "^10.2.1",
+    "migrate-mongo": "^11.0.0",
     "mongoose": "^7.3.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.11",
