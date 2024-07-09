@@ -11,14 +11,6 @@ const postSchema = mongoose.Schema({
   space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
   createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
   createdAt: Date,
-  totalComments: {
-    type: Number,
-    default: 0,
-  },
-  totalReactions: {
-    type: Number,
-    default: 0,
-  },
   location: {
     type: {
       type: String,
