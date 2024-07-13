@@ -2,17 +2,43 @@ import fs from 'fs';
 import util from 'util';
 const unlinkFile = util.promisify(fs.unlink);
 import { Upload } from '@aws-sdk/lib-storage';
-import { S3 } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import crypto from 'crypto';
 import path from 'path';
 
-const s3 = new S3({
-  region: process.env.AWS_S3_BUCKET_REGION,
+const bucketName = process.env.AWS_S3_BUCKET_NAME;
+const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
+const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
+const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
 
+const s3 = new S3Client({
+  region: bucketRegion,
   credentials: {
-    accessKeyId: process.env.AWS_S3_BUCKET_ACCESS_KEY,
-    secretAccessKey: process.env.AWS_S3_BUCKET_SECRET_KEY,
+    accessKeyId: bucketAccessKey,
+    secretAccessKey: bucketSecretKey,
   },
 });
+
+export const uploadAsset = async (buffer, mimeType, contentType) => {
+  const assetName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
+
+  const keyPrefixMap = {
+    icon: 'icons',
+    photo: 'photos',
+    video: 'videos',
+  };
+
+  const Key = `${keyPrefixMap[contentType]}/${assetName()}`;
+
+  const params = {
+    Bucket: bucketName,
+    Key,
+    Body: buffer,
+    ContentType: mimeType,
+  };
+  const command = new PutObjectCommand(params);
+  await s3.send(command);
+};
 
 export const uploadPhoto = async (originalFileName, outputFileName, contentType, binaryData) => {
   const __dirname = path.resolve();

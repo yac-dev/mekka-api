@@ -5,6 +5,7 @@ const commentSchema = mongoose.Schema({
   post: {
     type: mongoose.Schema.ObjectId,
     ref: 'Post',
+    index: true,
   },
   reply: {
     type: mongoose.Schema.ObjectId,

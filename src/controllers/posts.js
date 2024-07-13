@@ -22,241 +22,10 @@ import { Expo } from 'expo-server-sdk';
 import mongoose from 'mongoose';
 const expo = new Expo();
 const unlinkFile = util.promisify(fs.unlink);
-
-// post時に何をするかだね。
-// transaction, atomicityの実装。atlasで使えるのかな？？
-// contentsを作って、postを作って、reactionStatusを作って、tagを作って、もしくはtagをupdateして、spaceLogを作って、tagLogを作る。
-// かなりのoperationが必要になるよな。。。
-// export const createPost = async (request, response) => {
-//   const session = await mongoose.startSession();
-//   try {
-//     session.startTransaction();
-//     // postで、reactionを全部持っておかないとね。
-//     const { caption, createdBy, spaceId, reactions, addedTags, createdTags, createdLocationTag, addedLocationTag } =
-//       request.body;
-//     console.log('created tags', createdTags);
-//     console.log('added tags', addedTags);
-//     console.log('created locationtag', createdLocationTag);
-//     console.log('added location tag', addedLocationTag);
-
-//     // const disappearAt = new Date(new Date().getTime() + Number(disappearAfter) * 60 * 1000);
-//     // 現在の時間にdissaperAfter(minute)を足した日時を出す。
-//     // const parsedLocation = JSON.parse(location);
-//     const parsedReactions = JSON.parse(reactions);
-//     const parsedTags = JSON.parse(addedTags);
-//     const parsedCreatedTags = JSON.parse(createdTags);
-//     // const parsedLocationTag = JSON.parse(addedLocationTag);
-//     const files = request.files;
-//     const createdAt = new Date();
-//     const contentIds = [];
-//     const contents = [];
-//     let parsedCreatedLocationTag;
-//     if (createdLocationTag) {
-//       parsedCreatedLocationTag = JSON.parse(createdLocationTag);
-//     }
-
-//     // 1 contentsを作る。
-//     // batch creation
-//     // そう言うことで言うと、contentsのidもだわ。。。
-//     const contentPromises = files.map(async (file) => {
-//       const contentId = new mongoose.Types.ObjectId();
-//       contentIds.push(contentId);
-//       const content = await Content.create(
-//         [
-//           {
-//             _id: contentId,
-//             data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-//               file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
-//             }/${file.filename}`,
-//             type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
-//             createdBy,
-//             createdAt,
-//           },
-//         ],
-//         { session }
-//       );
-//       contents.push(content);
-//       // contentIds.push(content._id);
-//       await uploadPhoto(file.filename, content.type);
-//       return content;
-//     });
-//     const contentDocuments = await Promise.all(contentPromises, { session });
-
-//     // for (let file of files) {
-//     //   const content = await Content.create({
-//     //     data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-//     //       file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
-//     //     }/${file.filename}`,
-//     //     type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
-//     //     createdBy,
-//     //     createdAt,
-//     //   });
-//     //   contents.push(content);
-//     //   contentIds.push(content._id);
-//     //   await uploadPhoto(file.filename, content.type);
-//     // }
-//     // そもそも、これspaceもfetchしなきゃいけないよな。。。こういうの、すげー効率がなー。
-//     var postId = new mongoose.Types.ObjectId();
-//     // 2,postを作る
-//     const locationTagId = new mongoose.Types.ObjectId();
-//     let locationTag;
-//     if (createdLocationTag) {
-//       locationTag = await LocationTag.create(
-//         [
-//           {
-//             _id: locationTagId,
-//             iconType: parsedCreatedLocationTag.iconType,
-//             icon: parsedCreatedLocationTag.icon,
-//             image: parsedCreatedLocationTag.image,
-//             name: parsedCreatedLocationTag.name,
-//             point: parsedCreatedLocationTag.point,
-//             color: parsedCreatedLocationTag.color,
-//             space: spaceId,
-//             createdBy: createdBy,
-//           },
-//         ],
-//         { session }
-//       );
-//     }
-
-//     const post = await Post.create(
-//       [
-//         {
-//           _id: postId,
-//           contents: contentIds,
-//           caption,
-//           space: spaceId,
-//           locationTag: createdLocationTag ? locationTagId : addedLocationTag,
-//           createdBy,
-//           createdAt,
-//         },
-//       ],
-//       { session }
-//     );
-
-//     // 3 reactionのstatusを作る。
-//     const reacionStatusObjects = parsedReactions.map((reactionId) => {
-//       return {
-//         post: postId,
-//         reaction: reactionId,
-//         count: 0,
-//       };
-//     });
-//     const reactionAndStatuses = await ReactionStatus.insertMany(reacionStatusObjects, { session });
-
-//     const tagIds = [];
-
-//     // 4 新しいtagを作る、もし、createdTagsがあったら。
-//     if (parsedCreatedTags.length) {
-//       const tagObjects = parsedCreatedTags.map((tag) => {
-//         const tagId = new mongoose.Types.ObjectId();
-//         tagIds.push(tagId);
-//         return {
-//           _id: tagId,
-//           iconType: tag.iconType,
-//           icon: tag.icon,
-//           color: tag.color,
-//           image: tag.image,
-//           name: tag.name,
-//           count: 1,
-//           space: spaceId,
-//           createdBy: createdBy,
-//           updatedAt: new Date(),
-//         };
-//       });
-//       const tagDocuments = await Tag.insertMany(tagObjects, { session });
-//       // tagDocuments.forEach((tagDocument) => {
-//       //   tagIds.push(tagDocument._id);
-//       // });s
-//     }
-
-//     // だから、client側ではtagのidだけを入れておく感じな。
-//     if (parsedTags.length) {
-//       // parsedTags
-//       const tags = await Tag.find({ _id: { $in: parsedTags } });
-//       const updatePromises = tags.map((tag) => {
-//         tag.count += 1;
-//         tag.updatedAt = new Date();
-//         return tag.save();
-//       });
-
-//       // Execute all update promises in parallel
-//       await Promise.all(updatePromises, { session });
-//       tagIds.push(...parsedTags);
-//       // parsedTags.forEach((tagId) => {
-//       //   tagIds.push(tagId);
-//       // });
-//     }
-
-//     // tagIdsをもとにpostAndTagのrelationshipを作る、もちろん最終的にtagIdsのlengthがあったらね。
-//     // 最終的に、つけられたtagとpostのrelationshipを作る。
-//     if (tagIds.length) {
-//       const postAndTagRelationshipObjects = tagIds.map((tagId) => {
-//         return {
-//           post: postId,
-//           tag: tagId,
-//         };
-//       });
-
-//       const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects, {
-//         session,
-//       });
-//     }
-//     await session.commitTransaction();
-
-//     response.status(201).json({
-//       post: {
-//         _id: postId,
-//         content: {
-//           data: contents[0].data,
-//           type: contents[0].type,
-//         },
-//       },
-//     });
-//   } catch (error) {
-//     await session.abortTransaction();
-//     console.log(error);
-//     response.status(500).json({ error: 'An error occurred' });
-//   } finally {
-//     session.endSession();
-//   }
-// };
-
-const sharpImage = async (inputFileName) => {
-  const __dirname = path.resolve();
-  const fileInput = path.join(__dirname, 'buffer', inputFileName);
-  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
-  const outputPath = path.join(__dirname, 'buffer', outputFileName);
-  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
-  const processed = await sharp(fileInput)
-    .resize(700)
-    .webp({ quality: 1 })
-    // .toFile(outputPath)
-    .toBuffer((err, data) => console.log('finished...'));
-  return processed;
-};
-
-const optimizeVideo = (originalFileName, newFileName) => {
-  const compressOptions = {
-    videoCodec: 'libx264', // 使用するビデオコーデック
-    audioCodec: 'aac', // 使用するオーディオコーデック
-    size: '990x540', // 出力動画の解像度
-  };
-  const __dirname = path.resolve();
-  const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
-  const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
-  return new Promise((resolve, reject) => {
-    exec(command, (err, stdout, stderr) => {
-      if (err) console.log('Error ', err);
-      else {
-        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
-        resolve(outputFilePath);
-      }
-    });
-  });
-};
-
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import crypto from 'crypto';
+import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
+import Reaction from '../models/reaction.js';
 // const optimizeVideo = (originalFileName, newFileName) => {
 //   const compressOptions = {
 //     videoCodec: 'libx264', // 使用するビデオコーデック
@@ -286,17 +55,122 @@ const optimizeVideo = (originalFileName, newFileName) => {
 
 // photo postと、video postで、場合わけをしないといけないな。。。
 // videoの場合は、ffmpeg通さないといけないから。
+// s3にも、これで入れられるのかみたいね。これ使えたら今までの無茶苦茶面倒臭いの全部なくなるから。。。
+
+const sharpImage = async (inputFileName) => {
+  const __dirname = path.resolve();
+  const fileInput = path.join(__dirname, 'buffer', inputFileName);
+  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
+  const outputPath = path.join(__dirname, 'buffer', outputFileName);
+  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
+  const processed = await sharp(fileInput)
+    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
+    .resize({ height: 1920, width: 1080, fit: 'contain' })
+    .webp({ quality: 1 })
+    .toBuffer();
+  return processed;
+};
+
+// ここもできれば、memory内で済ませたいができるんだろうか・・・？
+const optimizeVideo = (originalFileName, newFileName) => {
+  const compressOptions = {
+    videoCodec: 'libx264', // 使用するビデオコーデック
+    audioCodec: 'aac', // 使用するオーディオコーデック
+    size: '990x540', // 出力動画の解像度
+  };
+  const __dirname = path.resolve();
+  const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
+  const outputFilePath = path.join(__dirname, 'buffer', newFileName);
+  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
+  return new Promise((resolve, reject) => {
+    exec(command, (err, stdout, stderr) => {
+      if (err) console.log('Error ', err);
+      else {
+        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
+        resolve(outputFilePath);
+      }
+    });
+  });
+};
+
+const processVideo = () => {};
+
 export const experiment = async (request, response) => {
   try {
-    const data = request.file.filename;
-    console.log(data);
-    // const sharpedImageBinary = await sharpImage(contentObject.fileName);
-    const __dirname = path.resolve();
-    const fileInput = path.join(__dirname, 'buffer', request.file.filename);
-    const outputFileName = `${request.file.filename.split('.')[0]}.webp`;
-    const outputPath = path.join(__dirname, 'buffer', outputFileName);
-    const processed = await sharp(fileInput).resize(700).webp({ quality: 1 }).toFile(outputPath);
-    // .toBuffer((err, data) => console.log(data));
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
+    const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
+    const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
+
+    const imageName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
+
+    const s3 = new S3Client({
+      credentials: {
+        accessKeyId: bucketAccessKey,
+        secretAccessKey: bucketSecretKey,
+      },
+      region: bucketRegion,
+    });
+    const sharpedBuffer = await sharp(request.file.buffer)
+      .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
+      .resize({ height: 1920, width: 1080, fit: 'contain' })
+      .webp({ quality: 1 })
+      .toBuffer();
+    console.log(sharpedBuffer);
+
+    // const params = {
+    //   Bucket: bucketName,
+    //   Key: imageName(),
+    //   Body: sharpedBuffer,
+    //   ContentType: request.file.mimetype,
+    // };
+    // const command = new PutObjectCommand(params);
+    // await s3.send(command);
+
+    response.status(201).json({
+      message: 'success',
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const optimizeVideoNew = (inputBuffer) => {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const ffmpegCommand = ffmpeg(inputBuffer)
+      .inputFormat('mp4') // Ensure the input format is specified
+      .videoCodec('libx264')
+      .audioCodec('aac')
+      .size('990x540')
+      .on('error', (err) => reject(err))
+      .on('end', () => resolve(Buffer.concat(chunks)))
+      .pipe();
+
+    ffmpegCommand.on('data', (chunk) => chunks.push(chunk));
+  });
+};
+
+export const experimentVideo = async (request, response) => {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
+    const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
+    const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
+
+    const videoName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
+
+    const s3 = new S3Client({
+      credentials: {
+        accessKeyId: bucketAccessKey,
+        secretAccessKey: bucketSecretKey,
+      },
+      region: bucketRegion,
+    });
+
+    const optimizedVideo = await optimizeVideoNew(request.file.buffer);
+    console.log(optimizedVideo);
+
     response.status(201).json({
       message: 'success',
     });
@@ -307,7 +181,6 @@ export const experiment = async (request, response) => {
 
 export const createPost = async (request, response) => {
   try {
-    // postで、reactionを全部持っておかないとね。
     const {
       caption,
       createdBy,
@@ -336,19 +209,7 @@ export const createPost = async (request, response) => {
     // const contents = [];
     console.log('these are contents ', JSON.parse(contents));
     let parsedCreatedLocationTag;
-    // if (createdLocationTag) {
-    //   parsedCreatedLocationTag = JSON.parse(createdLocationTag);
-    // }
-    // let parsedAddedLocationTag;
-    // if (addedLocationTag) {
-    //   parsedAddedLocationTag = JSON.parse(addedLocationTag);
-    // }
     console.log('request body from  ', request.body);
-
-    // console.log(parsedCreatedLocationTag);
-    // console.log(parsedAddedLocationTag);
-    // console.log(request);
-
     // まあ、一応動く。ただ、icon upload部分の動きも変わっちゃっている。そこを直さないといいかん。
     const contentPromises = JSON.parse(contents).map(async (contentObject) => {
       let fileName;
@@ -396,51 +257,7 @@ export const createPost = async (request, response) => {
       }
     });
 
-    // 1 contentsを作る。
-    // batch creation
-    // そっか、これあれだわな。。。fileで作っちゃっているからdurationをつけようがないよな。。
-    // -----------------
-    // const contentPromises = files.map(async (file) => {
-    //   const content = await Content.create({
-    //     data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-    //       file.mimetype === 'image/jpeg' ? 'photos' : 'videos'
-    //     }/${file.filename}`,
-    //     type: file.mimetype === 'image/jpeg' ? 'photo' : 'video',
-    //     duration: file.mimetype === 'image/jpeg' ? null : duration,
-    //     createdBy,
-    //     createdAt,
-    //   });
-    //   contentIds.push(content._id);
-    //   await uploadPhoto(file.filename, content.type);
-    //   return content;
-    // });
     const contentDocuments = await Promise.all(contentPromises);
-
-    // // 2,postを作る
-    // let locationTag;
-    // if (createdLocationTag) {
-    //   locationTag = await LocationTag.create({
-    //     iconType: parsedCreatedLocationTag.iconType,
-    //     icon: parsedCreatedLocationTag.icon,
-    //     image: parsedCreatedLocationTag.image,
-    //     name: parsedCreatedLocationTag.name,
-    //     point: parsedCreatedLocationTag.point,
-    //     color: parsedCreatedLocationTag.color,
-    //     space: spaceId,
-    //     createdBy: createdBy,
-    //   });
-    // }
-
-    // let addingLocationTag;
-    // if (createdLocationTag) {
-    //   addingLocationTag = createdLocationTag;
-    // } else if (addedLocationTag) {
-    //   addingLocationTag = addedLocationTag;
-    // } else {
-    //   addingLocationTag = null;
-    // }
-
-    // console.log(addingLocationTag);
 
     const post = await Post.create({
       contents: contentIds,
@@ -545,14 +362,7 @@ export const createPost = async (request, response) => {
 
       const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
     }
-    // spaceのupdateLogを作る。
-    // const spaceUpdateLog = await SpaceUpdateLog.create({
-    //   space: spaceId,
-    //   post: post._id,
-    //   tag: tagIds[0],
-    //   createdBy: createdBy,
-    //   createdAt: new Date(),
-    // });
+
     const log = await Log.create({
       space: spaceId,
       type: 'normal',
@@ -561,22 +371,6 @@ export const createPost = async (request, response) => {
       createdBy: createdBy,
       createdAt: new Date(),
     });
-    // ここでspaceに関するlogを作る。
-
-    // tagのupdate logを作る。
-    // if (tagIds.length) {
-    //   const tagUpdateLogObjects = tagIds.map((tagId) => {
-    //     return {
-    //       tag: tagId,
-    //       updatedBy: createdBy,
-    //       updatedAt: new Date(),
-    //     };
-    //   });
-
-    //   const tagUpdateLogDocuments = await TagUpdateLog.insertMany(tagUpdateLogObjects);
-    // }
-
-    // ---------------------
 
     const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
       space: spaceId,
@@ -836,39 +630,47 @@ export const getPostsByTagId = async (request, response) => {
             model: 'Content',
           },
           { path: 'createdBy', model: 'User', select: '_id name avatar' },
+          { path: 'space', model: 'Space', select: 'reactions' },
         ],
       });
-    // console.log(postAndTagRelationships);
 
-    const posts = postAndTagRelationships
-      .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
-      .map((relationship, index) => {
-        // console.log(relationship.post);
-        if (
-          relationship.post.type === 'normal' ||
-          (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
-        ) {
-          return {
-            _id: relationship.post._id,
-            contents: relationship.post.contents,
-            type: relationship.post.type,
-            caption: relationship.post.caption,
-            locationTag: relationship.post.locationTag,
-            createdAt: relationship.post.createdAt,
-            createdBy: relationship.post.createdBy,
-            disappearAt: relationship.post.disappearAt,
-            totalComments: relationship.post.totalComments,
-            totalReactions: relationship.post.totalReactions,
-          };
-        }
-      })
-      .filter((relationship) => relationship);
+    const posts = await Promise.all(
+      postAndTagRelationships
+        .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
+        .map(async (relationship) => {
+          if (
+            relationship.post.type === 'normal' ||
+            (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
+          ) {
+            const totalComments = await Comment.countDocuments({ post: relationship.post._id });
+            // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+            const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
+              post: relationship.post._id,
+            });
+            return {
+              _id: relationship.post._id,
+              contents: relationship.post.contents,
+              type: relationship.post.type,
+              caption: relationship.post.caption,
+              locationTag: relationship.post.locationTag,
+              createdAt: relationship.post.createdAt,
+              createdBy: relationship.post.createdBy,
+              disappearAt: relationship.post.disappearAt,
+              totalComments,
+              totalReactions,
+            };
+          }
+        })
+    );
 
-    // console.log('these are posts', posts);
+    // 一応, totalReactionsは撮ってこれるようになったね。
+
+    const filteredPosts = posts.filter((post) => post);
+
     if (!posts.length) hasNextPage = false;
     response.status(200).json({
       data: {
-        posts,
+        posts: filteredPosts,
         currentPage: page + 1,
         hasNextPage,
       },
@@ -1106,3 +908,147 @@ export const getMomentPostsBySpaceId = async (request, response) => {
 //     console.log(error);
 //   }
 // };
+
+export const getReactionsByPostId = async (request, response) => {
+  try {
+    const { postId, spaceId } = request.params;
+    // const reactionsDocument = await Reaction.find({ space: spaceId }).populate({
+    //   path: 'sticker',
+    //   model: 'Sticker',
+    // });
+
+    // const reactions = await PostAndReactionAndUserRelationship.aggregate([
+    //   // aggregation pipelineでは、match stageでid比較したお場合は、monggose objectIdに変換せんといかんらしい。
+    //   { $match: { post: new mongoose.Types.ObjectId(postId) } },
+    //   // aggragation pipelineのgroupでは, _id nullだと全てをdocumentをcountするっぽい。
+    //   {
+    //     $group: {
+    //       _id: '$reaction',
+    //       count: { $sum: 1 },
+    //     },
+    //   },
+    //   // 上のarrayをさらにaggregationする。
+    //   {
+    //     $lookup: {
+    //       from: 'reactions',
+    //       localField: '_id', //上でaggregationして得たのがlocalでそれをjoinしていく。それをreactionsという名前でoutputする。
+    //       foreignField: '_id',
+    //       as: 'reactionDetails',
+    //     },
+    //   },
+    //   // 上の結果arrayをdestructureしていく。
+    //   { $unwind: '$reactionDetails' },
+    //   {
+    //     $lookup: {
+    //       from: 'stickers',
+    //       localField: 'reactionDetails.sticker',
+    //       foreignField: '_id',
+    //       as: 'stickerDetails',
+    //     },
+    //   },
+    //   {
+    //     $unwind: {
+    //       path: '$stickerDetails',
+    //       preserveNullAndEmptyArrays: true,
+    //     },
+    //   },
+    //   {
+    //     $project: {
+    //       // _id: 0,
+    //       _id: '$reactionDetails._id',
+    //       type: '$reactionDetails.type',
+    //       emoji: '$reactionDetails.emoji',
+    //       sticker: '$stickerDetails',
+    //       caption: '$reactionDetails.caption',
+    //       count: '$count',
+    //     },
+    //   },
+    // ]);
+
+    // const reactionDocumentsWithCount = reactionsDocument.map((reactionDoc) => {
+    //   const reactionWithCount = reactions.find((reaction) => reaction._id.toString() === reactionDoc._id.toString());
+    //   return {
+    //     ...reactionDoc.toObject(),
+    //     count: reactionWithCount ? reactionWithCount.count : 0,
+    //   };
+    // });
+
+    // response.status(200).json({
+    //   data: {
+    //     reactions: reactionDocumentsWithCount,
+    //   },
+    // });
+    const reactions = await Reaction.aggregate([
+      { $match: { space: new mongoose.Types.ObjectId(spaceId) } },
+      {
+        $lookup: {
+          from: 'postandreactionanduserrelationships',
+          let: { reactionId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$reaction', '$$reactionId'] } } },
+            { $match: { post: new mongoose.Types.ObjectId(postId) } },
+            { $group: { _id: '$reaction', count: { $sum: 1 } } },
+          ],
+          as: 'reactionCount',
+        },
+      },
+      {
+        $lookup: {
+          from: 'stickers',
+          localField: 'sticker',
+          foreignField: '_id',
+          as: 'stickerDetails',
+        },
+      },
+      { $unwind: { path: '$stickerDetails', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          count: { $arrayElemAt: ['$reactionCount.count', 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          type: 1,
+          emoji: 1,
+          sticker: '$stickerDetails',
+          caption: 1,
+          count: { $ifNull: ['$count', 0] },
+        },
+      },
+    ]);
+
+    response.status(200).json({
+      data: {
+        reactions,
+      },
+    });
+  } catch (error) {
+    response.status(500).json({
+      error: error.message,
+    });
+  }
+};
+
+export const createReaction = async (request, response) => {
+  try {
+    const { postId } = request.params;
+    const { reactionId, userId } = request.body;
+    console.log('running reactionId', reactionId);
+    console.log('userId', userId);
+    const reactionRelationship = await PostAndReactionAndUserRelationship.create({
+      post: postId,
+      reaction: reactionId,
+      user: userId,
+    });
+    response.status(201).json({
+      data: {
+        reactionId,
+      },
+    });
+  } catch (error) {
+    response.status(500).json({
+      error: error.message,
+    });
+  }
+};

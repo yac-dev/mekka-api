@@ -1,4 +1,5 @@
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
+import User from '../models/user.js';
 
 export const getUsersBySpaceId = async (request, response) => {
   try {
@@ -21,6 +22,19 @@ export const getUsersBySpaceId = async (request, response) => {
         users,
       },
     });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getUsersByAddress = async (request, response) => {
+  try {
+    const users = await User.find();
+    const mapped = users.map((user) => {
+      return user.addresss;
+    });
+
+    response.status(200).json({ data: { users: mapped } });
   } catch (error) {
     console.log(error);
   }
