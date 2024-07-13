@@ -25,7 +25,9 @@ router.route('/experiment/video').post(multerParserInMemory.single('experiment')
 // multi-partのkey名はclient側のnameと必ず一致していること。
 router.route('/:postId').get(getPost);
 router.route('/:postId/comments').get(getCommentsByPostId);
-router.route('/:postId/reactions').get(getReactionsByPostId).post(createReaction);
+router.route('/:postId/reactions').post(createReaction);
+router.route('/:postId/reactions/:spaceId').get(getReactionsByPostId);
+
 router.route('/tag/:tagId').get(getPostsByTagId);
 router.route('/tag/:tagId/region').post(getPostsByTagIdAndRegion);
 router.route('/locationtag/:locationTagId/space/:spaceId').get(getPostsByLocationTagId);
