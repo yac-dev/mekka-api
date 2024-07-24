@@ -189,6 +189,7 @@ export const createSpace = async (request, response) => {
           rate: space.rate,
           tags: [
             {
+              _id: tag._id,
               iconType: tag.iconType,
               icon: hashTagIcon,
               name: tag.name,
