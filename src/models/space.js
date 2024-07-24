@@ -36,8 +36,6 @@ const spaceSchema = mongoose.Schema({
       ref: 'Reaction',
     },
   ],
-  totalPosts: Number,
-  totalMembers: Number,
   rate: Number,
   createdBy: {
     type: mongoose.Schema.ObjectId,
