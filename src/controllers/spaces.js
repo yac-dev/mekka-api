@@ -44,6 +44,7 @@ export const createSpace = async (request, response) => {
     console.log(userData);
 
     // --------------
+    // memory storage使ってiconをs3にあげる。
     const randomString = generateRandomString(12);
     const space = new Space({
       name,
@@ -81,6 +82,7 @@ export const createSpace = async (request, response) => {
             space: space._id,
             type: 'emoji',
             emoji: reaction.emoji,
+            caption: reaction.caption,
           };
         } else if (reaction.type === 'sticker') {
           return {
@@ -88,6 +90,7 @@ export const createSpace = async (request, response) => {
             space: space._id,
             type: 'sticker',
             sticker: reaction.sticker,
+            caption: reaction.caption,
           };
         }
       });
@@ -101,6 +104,7 @@ export const createSpace = async (request, response) => {
             space: reaction.space,
             type: 'emoji',
             emoji: reaction.emoji,
+            caption: reaction.caption,
           };
         } else if (reaction.type === 'sticker') {
           return {
@@ -108,6 +112,7 @@ export const createSpace = async (request, response) => {
             space: reaction.space,
             type: 'sticker',
             sticker: reaction.sticker._id,
+            caption: reaction.caption,
           };
         }
       });
@@ -144,6 +149,8 @@ export const createSpace = async (request, response) => {
       createdAt: new Date(),
       lastCheckedIn: new Date(),
     });
+    // const sharpedImageBinary = await sharpImage(contentObject.fileName);
+    //     await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
     await uploadIcon(request.file.filename);
     const hashTagIcon = await Icon.findOne({ name: 'hash' });
     //　確かに、作ったあとはもってこれないやシンプルに。
@@ -179,8 +186,6 @@ export const createSpace = async (request, response) => {
           reactions: space.isReactionAvailable ? reactionOptions : undefined,
           createdBy: userData,
           createdAt: space.createdAt,
-          totalPosts: space.totalPosts,
-          totalMembers: space.totalMembers,
           rate: space.rate,
           tags: [
             {

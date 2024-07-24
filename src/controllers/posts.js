@@ -185,7 +185,6 @@ export const createPost = async (request, response) => {
       caption,
       createdBy,
       spaceId,
-      reactions,
       addedTags,
       createdTags,
       createdLocationTag,
@@ -199,7 +198,6 @@ export const createPost = async (request, response) => {
     // const parsedLocation = JSON.parse(location);
     const createdAt = new Date();
     const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
-    const parsedReactions = JSON.parse(reactions);
     const parsedTags = JSON.parse(addedTags);
     const parsedCreatedTags = JSON.parse(createdTags);
     const parsedLocation = JSON.parse(location);
@@ -270,16 +268,6 @@ export const createPost = async (request, response) => {
       createdBy,
       createdAt,
     });
-
-    // 3 reactionのstatusを作る。
-    const reacionStatusObjects = parsedReactions.map((reactionId) => {
-      return {
-        post: post._id,
-        reaction: reactionId,
-        count: 0,
-      };
-    });
-    const reactionAndStatuses = await ReactionStatus.insertMany(reacionStatusObjects);
 
     const tagIds = [];
 
@@ -420,14 +408,11 @@ export const createPost = async (request, response) => {
           type: post.type,
           caption: post.caption,
           space: spaceId,
-          // locationTag: addingLocationTag ? addingLocationTag._id : null,
           createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
           createdAt: post.createdAt,
           disappearAt: post.disappearAt,
-          // content: {
-          //   data: contents[0].data,
-          //   type: contents[0].type,
-          // },
+          totalComments: 0,
+          totalReactions: 0,
         },
         addedTags: [...parsedTags],
         createdTags: tagObjects ? tagObjects : null,
@@ -442,11 +427,10 @@ export const createPost = async (request, response) => {
 
 export const createMoment = async (request, response) => {
   try {
-    const { caption, createdBy, spaceId, reactions, contents, type, disappearAfter } = request.body;
+    const { caption, createdBy, spaceId, contents, type, disappearAfter } = request.body;
     console.log('got moment post request');
     const createdAt = new Date();
     const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
-    const parsedReactions = JSON.parse(reactions);
     const files = request.files;
     const contentIds = [];
 
@@ -507,16 +491,6 @@ export const createMoment = async (request, response) => {
       createdAt,
     });
 
-    // 3 reactionのstatusを作る。
-    const reacionStatusObjects = parsedReactions.map((reactionId) => {
-      return {
-        post: post._id,
-        reaction: reactionId,
-        count: 0,
-      };
-    });
-    const reactionAndStatuses = await ReactionStatus.insertMany(reacionStatusObjects);
-
     // const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
     //   space: spaceId,
     //   user: { $ne: createdBy },
@@ -575,6 +549,8 @@ export const createMoment = async (request, response) => {
           createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
           createdAt: post.createdAt,
           disappearAt: post.disappearAt,
+          totalComments: 0,
+          totalReactions: 0,
         },
       },
     });
