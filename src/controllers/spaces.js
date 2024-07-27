@@ -56,7 +56,6 @@ export const createSpace = async (request, response) => {
       isCommentAvailable: isCommentAvailableValue,
       isReactionAvailable: isReactionAvailableValue,
       createdBy: new mongoose.Types.ObjectId(userData._id),
-      createdAt: new Date(),
       totalPosts: 0,
       totalMembers: 1,
       rate: 0,
@@ -146,8 +145,6 @@ export const createSpace = async (request, response) => {
     const spaceAndUserRelationship = await SpaceAndUserRelationship.create({
       space: space._id,
       user: userData._id,
-      createdAt: new Date(),
-      lastCheckedIn: new Date(),
     });
     // const sharpedImageBinary = await sharpImage(contentObject.fileName);
     //     await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
