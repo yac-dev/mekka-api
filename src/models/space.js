@@ -41,7 +41,10 @@ const spaceSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User',
   },
-  createdAt: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
   updatedAt: Date, //　こんな感じで行きたいわけで。。。
   // tags: [
   //   {

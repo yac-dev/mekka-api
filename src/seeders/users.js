@@ -3,13 +3,6 @@ import { MembershipStatus } from '../models/membershipStatus.js';
 
 const users = [
   {
-    name: 'Yosuke Kojima',
-    email: 'yabbee0828@gmail.com',
-    password: 'testuser12',
-    avatar: `https://mekka-dev.s3.us-east-2.amazonaws.com/avatars/default-avatar-1.png`,
-    pushToken: '',
-  },
-  {
     name: 'John Doe',
     email: 'john@example.com',
     password: 'testuser12',
@@ -34,7 +27,6 @@ const users = [
 
 export const seedUsers = async () => {
   try {
-    // documents作る前に、dataを全部消す。
     await User.deleteMany({});
     await MembershipStatus.deleteMany({});
     console.log('🗑️ All documents deleted 🗑️');
@@ -49,7 +41,7 @@ export const seedUsers = async () => {
       user.membershipStatus = membershipStatus._id;
       await user.save();
     }
-    console.log('🔋 User documents seeded successfully 🔋');
+    console.log('🌱 User documents seeded successfully 🌱');
   } catch (error) {
     console.error('Error seeding users:', error);
   }
