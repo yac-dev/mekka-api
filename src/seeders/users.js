@@ -29,7 +29,7 @@ export const seedUsers = async () => {
   try {
     await User.deleteMany({});
     await MembershipStatus.deleteMany({});
-    console.log('🗑️ All documents deleted 🗑️');
+    console.log('🗑️ All user documents deleted 🗑️');
 
     for (const userData of users) {
       const user = new User(userData);
