@@ -53,6 +53,8 @@ export const getMySpaces = async (request, response) => {
       return plainSpaceObject;
     });
 
+    console.log('my spaces -> ', newMySpaces);
+
     response.status(200).json({
       data: {
         mySpaces: newMySpaces,
