@@ -1,21 +1,4 @@
 import Content from '../models/content.js';
-import User from '../models/user.js';
-
-// s3の写真の名前でdetectしようか。￥
-// data 自体は、https://mekka-dev.s3.us-east-2.amazonaws.com/photos/pizza_1.jpgか、https://mekka-dev.s3.us-east-2.amazonaws.com/photos/winter_1.jpg
-// pizzaかwinterのどちらかなわけだ。ここはまあ別に作るときに動的に絞めれば良くて、、、
-const contents = [
-  {
-    data: 'https://mekka-dev.s3.us-east-2.amazonaws.com/photos/pizza_1.jpg', // s3のlink
-    type: 'photo',
-    duration: null,
-  },
-  {
-    data: 'https://mekka-dev.s3.us-east-2.amazonaws.com/photos/winter_1.jpg', // s3のlink
-    type: 'photo',
-    duration: null,
-  },
-];
 
 const generateContents = () => {
   const contentTypes = ['pizza', 'winter'];
