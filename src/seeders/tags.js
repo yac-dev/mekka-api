@@ -14,14 +14,21 @@ const tags = [
   },
   {
     icon: null,
-    name: 'Summer',
+    name: 'Winter vacation',
     color: 'white',
     space: null,
     createdBy: null,
   },
   {
     icon: null,
-    name: 'BBQ time!',
+    name: 'Pizza time!',
+    color: 'white',
+    space: null,
+    createdBy: null,
+  },
+  {
+    icon: null,
+    name: 'BBQ',
     color: 'white',
     space: null,
     createdBy: null,
