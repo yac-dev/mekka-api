@@ -45,11 +45,17 @@ export const seedPosts = async () => {
     const contents = await Content.find({});
     const spaces = await Space.find({});
     const users = await User.find({});
+    const normalContents = contents.filter(
+      (content) => content.data.includes('pizza') || content.data.includes('winter')
+    );
+
+    const momentContents = contents.filter((content) => content.data.includes('moment'));
+
     // 各spaceごとにpostを作る。
     // ３重ループだが、まあ仕方ないな。。。
     // ここのpost 216こできちゃっているね。。。どうしよか。。。
     for (const space of spaces) {
-      for (const content of contents) {
+      for (const content of normalContents) {
         // for (const user of users) {
         //   const caption = captions[Math.floor(Math.random() * captions.length)];
         //   const location = locations[Math.floor(Math.random() * locations.length)];
@@ -74,6 +80,29 @@ export const seedPosts = async () => {
           createdBy: users[0]._id,
           createdAt: new Date(),
           location,
+        });
+        await newPost.save();
+      }
+    }
+
+    // momentsをここで作る。
+    for (const space of spaces) {
+      for (const content of momentContents) {
+        const caption = captions[Math.floor(Math.random() * captions.length)];
+        const location = locations[Math.floor(Math.random() * locations.length)];
+        const now = new Date();
+        const randomDisappearAt = new Date(now.getTime() + Math.random() * 24 * 60 * 60 * 1000);
+
+        const newPost = new Post({
+          ...post,
+          type: 'moment',
+          contents: [content._id],
+          caption,
+          space: space._id,
+          createdBy: users[0]._id,
+          createdAt: now,
+          location,
+          disappearAt: randomDisappearAt,
         });
         await newPost.save();
       }
