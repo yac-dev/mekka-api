@@ -12,11 +12,11 @@ const spaceAndUserRelationshipSchema = mongoose.Schema({
   },
   lastCheckedIn: {
     type: Date,
-    default: Date.now,
+    default: new Date(),
   },
   createdAt: {
     type: Date,
-    default: Date.now,
+    default: new Date(),
   },
 });
 
