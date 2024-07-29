@@ -8,7 +8,7 @@ export const seedPostAndTagRelationships = async () => {
     console.log('🗑️ PostAndTagRelationship cleared 🗑️');
 
     const tags = await Tag.find({});
-    const posts = await Post.find({}).populate([
+    const posts = await Post.find({ type: 'normal' }).populate([
       {
         path: 'contents',
         model: 'Content',
