@@ -610,14 +610,14 @@ export const getPostsByTagId = async (request, response) => {
         ],
       });
 
+    // || (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
+    // これ必要？？
+
     const posts = await Promise.all(
       postAndTagRelationships
         .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
         .map(async (relationship) => {
-          if (
-            relationship.post.type === 'normal' ||
-            (relationship.post.type === 'moment' && relationship.post.disappearAt > now)
-          ) {
+          if (relationship.post.type === 'normal') {
             const totalComments = await Comment.countDocuments({ post: relationship.post._id });
             // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
             const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({

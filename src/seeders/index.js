@@ -4,6 +4,7 @@ import { seedSpaceAndUserRelationships } from './spaceAndUserRelationships.js';
 import { seedTags } from './tags.js';
 import { seedContents } from './contents.js';
 import { seedPosts } from './posts.js';
+import { seedPostAndTagRelationships } from './postAndTagRelationships.js';
 
 import mongoose from 'mongoose';
 
@@ -27,6 +28,7 @@ const main = async () => {
   await seedTags();
   await seedContents();
   await seedPosts();
+  await seedPostAndTagRelationships();
 
   process.exit(0);
 };
