@@ -50,19 +50,32 @@ export const seedPosts = async () => {
     // ここのpost 216こできちゃっているね。。。どうしよか。。。
     for (const space of spaces) {
       for (const content of contents) {
-        for (const user of users) {
-          const caption = captions[Math.floor(Math.random() * captions.length)];
-          const location = locations[Math.floor(Math.random() * locations.length)];
-          const newPost = new Post({
-            ...post,
-            content: [content._id],
-            caption,
-            space: space._id,
-            createdBy: user._id,
-            location,
-          });
-          await newPost.save();
-        }
+        // for (const user of users) {
+        //   const caption = captions[Math.floor(Math.random() * captions.length)];
+        //   const location = locations[Math.floor(Math.random() * locations.length)];
+        //   const newPost = new Post({
+        //     ...post,
+        //     content: [content._id],
+        //     caption,
+        //     space: space._id,
+        //     createdBy: user._id,
+        //     location,
+        //   });
+        //   await newPost.save();
+        // }
+        const caption = captions[Math.floor(Math.random() * captions.length)];
+        const location = locations[Math.floor(Math.random() * locations.length)];
+        const newPost = new Post({
+          ...post,
+          type: 'normal',
+          contents: [content._id],
+          caption,
+          space: space._id,
+          createdBy: users[0]._id,
+          createdAt: new Date(),
+          location,
+        });
+        await newPost.save();
       }
     }
 

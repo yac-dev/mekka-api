@@ -1,5 +1,6 @@
 import User from '../models/user.js';
 import { MembershipStatus } from '../models/membershipStatus.js';
+import bcrypt from 'bcrypt';
 
 const users = [
   {
@@ -39,6 +40,8 @@ export const seedUsers = async () => {
       });
       await membershipStatus.save();
       user.membershipStatus = membershipStatus._id;
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(user.password, salt);
       await user.save();
     }
     console.log('🌱 User documents seeded successfully 🌱');
