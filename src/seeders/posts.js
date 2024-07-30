@@ -51,7 +51,7 @@ export const seedPosts = async () => {
     console.log('🗑️ All post documents deleted 🗑️');
 
     const contents = await Content.find({});
-    const spaces = await Space.find({});
+    const spaces = await Space.find();
     const users = await User.find({});
     const normalContents = contents.filter(
       (content) => content.data.includes('pizza') || content.data.includes('winter')
