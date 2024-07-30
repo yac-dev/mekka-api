@@ -43,54 +43,13 @@ const spaces = [
   },
 ];
 
-const reactions = [
-  {
-    type: 'emoji',
-    sticker: null,
-    emoji: '😁',
-    caption: 'Nice bro',
-  },
-  {
-    type: 'emoji',
-    sticker: null,
-    emoji: '😎',
-    caption: 'Braaavo',
-  },
-  {
-    type: 'sticker',
-    sticker: new mongoose.Types.ObjectId('64d0e091158cac146b8ef81a'),
-    emoji: null,
-    caption: 'Lmao',
-  },
-  {
-    type: 'sticker',
-    sticker: new mongoose.Types.ObjectId('64d0e014158cac146b8ef816'),
-    emoji: null,
-    caption: 'WTF?!',
-  },
-  {
-    type: 'emoji',
-    sticker: null,
-    emoji: '👎',
-    caption: 'Boooooo',
-  },
-  {
-    type: 'sticker',
-    sticker: new mongoose.Types.ObjectId('64d0e076158cac146b8ef819'),
-    emoji: null,
-    caption: 'Curious',
-  },
-];
-
 export const seedSpaces = async () => {
   try {
     // 最初に消す。
     await Space.deleteMany({});
-    await Reaction.deleteMany({});
     console.log('🗑️ All spaces and reactions deleted 🗑️');
 
     const users = await User.find(); // 全ユーザーを取得
-    const reactionDocs = await Reaction.insertMany(reactions); // リアクションを挿入
 
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
@@ -98,7 +57,6 @@ export const seedSpaces = async () => {
       const space = new Space({
         ...spaceData,
         createdBy: user._id,
-        reactions: reactionDocs.map((reaction) => reaction._id),
       });
       await space.save();
     }
