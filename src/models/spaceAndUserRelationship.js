@@ -10,8 +10,14 @@ const spaceAndUserRelationshipSchema = mongoose.Schema({
     ref: 'User',
     index: true,
   },
-  lastCheckedIn: Date,
-  createdAt: Date,
+  lastCheckedIn: {
+    type: Date,
+    default: new Date(),
+  },
+  createdAt: {
+    type: Date,
+    default: new Date(),
+  },
 });
 
 const SpaceAndUserRelationship = mongoose.model('SpaceAndUserRelationship', spaceAndUserRelationshipSchema);

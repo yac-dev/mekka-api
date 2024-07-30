@@ -7,7 +7,6 @@ const tagSchema = mongoose.Schema({
   }, // -> {_id: string, url: string, name: string}
   name: String,
   color: String,
-  count: Number,
   space: {
     type: mongoose.Schema.ObjectId,
     ref: 'Space',
