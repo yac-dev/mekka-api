@@ -1,6 +1,7 @@
 import User from '../models/user.js';
 import Space from '../models/space.js';
 import Reaction from '../models/reaction.js';
+import mongoose from 'mongoose';
 
 // それぞれのuserがそれぞれのspaceとrelationshipを持つ様に作りたいね。
 // 一人のuserに3つのspaceをもつ感じ。
@@ -57,13 +58,13 @@ const reactions = [
   },
   {
     type: 'sticker',
-    sticker: '64d0e091158cac146b8ef81a',
+    sticker: new mongoose.Types.ObjectId('64d0e091158cac146b8ef81a'),
     emoji: null,
     caption: 'Lmao',
   },
   {
     type: 'sticker',
-    sticker: '64d0e014158cac146b8ef816',
+    sticker: new mongoose.Types.ObjectId('64d0e014158cac146b8ef816'),
     emoji: null,
     caption: 'WTF?!',
   },
@@ -75,7 +76,7 @@ const reactions = [
   },
   {
     type: 'sticker',
-    sticker: '64d0e076158cac146b8ef819',
+    sticker: new mongoose.Types.ObjectId('64d0e076158cac146b8ef819'),
     emoji: null,
     caption: 'Curious',
   },
