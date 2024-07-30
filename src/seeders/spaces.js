@@ -6,34 +6,33 @@ import Reaction from '../models/reaction.js';
 // 一人のuserに3つのspaceをもつ感じ。
 const spaces = [
   {
-    name: "John Smith's",
+    name: 'Bros',
     icon: 'https://mekka-dev.s3.us-east-2.amazonaws.com/icons/default_space_1.jpg', // s3のlink
     secretKey: '123456789012',
-    contentType: 'photo',
+    contentType: 'photoAndVideo',
     description: 'This is the space 1',
-    videoLength: null,
+    videoLength: 20,
     disappearAfter: 1439,
     isPublic: false,
     isCommentAvailable: true,
     isReactionAvailable: true,
   },
   {
-    name: 'Space 2',
+    name: "John Smith's",
     icon: 'https://mekka-dev.s3.us-east-2.amazonaws.com/icons/default_space_2.jpg', // s3のlink
     secretKey: '234567890123',
-    contentType: 'photoAndVideo',
+    contentType: 'photo',
     description: 'This is the space 2',
-    videoLength: 60,
     disappearAfter: 5,
     isPublic: false,
     isCommentAvailable: true,
     isReactionAvailable: true,
   },
   {
-    name: 'Space 3',
+    name: 'Dog Lovers',
     icon: 'https://mekka-dev.s3.us-east-2.amazonaws.com/icons/default_space_3.jpg', // s3のlink
     secretKey: '3456789012345',
-    contentType: 'photoAndVideo',
+    contentType: 'video',
     description: 'This is the space 3',
     videoLength: 5,
     disappearAfter: 120,
@@ -47,20 +46,38 @@ const reactions = [
   {
     type: 'emoji',
     sticker: null,
-    emoji: '😊',
-    caption: 'Like',
+    emoji: '😁',
+    caption: 'Nice bro',
   },
   {
     type: 'emoji',
     sticker: null,
     emoji: '😎',
-    caption: 'Cool',
+    caption: 'Braaavo',
+  },
+  {
+    type: 'sticker',
+    sticker: '64d0e091158cac146b8ef81a',
+    emoji: null,
+    caption: 'Lmao',
+  },
+  {
+    type: 'sticker',
+    sticker: '64d0e014158cac146b8ef816',
+    emoji: null,
+    caption: 'WTF?!',
   },
   {
     type: 'emoji',
     sticker: null,
-    emoji: '😢',
-    caption: 'Sad',
+    emoji: '👎',
+    caption: 'Boooooo',
+  },
+  {
+    type: 'sticker',
+    sticker: '64d0e076158cac146b8ef819',
+    emoji: null,
+    caption: 'Curious',
   },
 ];
 
