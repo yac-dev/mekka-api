@@ -28,7 +28,14 @@ const userSchema = mongoose.Schema({
   },
   avatar: String, // s3 link
   pushToken: String,
-  createdAt: Date,
+  membershipStatus: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'MembershipStatus',
+  },
+  createdAt: {
+    type: Date,
+    default: new Date(),
+  },
 });
 
 // userSchema.set('toJSON', { virtuals: true });
