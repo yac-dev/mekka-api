@@ -15,10 +15,18 @@ import User from '../models/user.js';
 const captions = ['Best day ever', 'Happy day', 'WTF?!', 'Good weather'];
 
 const locations = [
-  { type: 'Point', coordinates: [120, 30] },
-  { type: 'Point', coordinates: [121, 31] },
-  { type: 'Point', coordinates: [122, 32] },
-  { type: 'Point', coordinates: [123, 33] },
+  { type: 'Point', coordinates: [9.42, 50.37] },
+  { type: 'Point', coordinates: [4.6, 47.68] },
+  { type: 'Point', coordinates: [8.33, 46.52] },
+  { type: 'Point', coordinates: [0.49, 44.01] },
+  { type: 'Point', coordinates: [15.38, 47.88] },
+  { type: 'Point', coordinates: [16.77, 49.55] },
+  { type: 'Point', coordinates: [17.86, 47.37] },
+  { type: 'Point', coordinates: [5.85, 52.58] },
+  { type: 'Point', coordinates: [12.52, 48.31] },
+  { type: 'Point', coordinates: [17.17, 50.94] },
+  { type: 'Point', coordinates: [1.06, 42.6] },
+  { type: 'Point', coordinates: [-1.35, 51.18] },
 ];
 
 const post = [
