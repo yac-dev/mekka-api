@@ -39,6 +39,7 @@ export const seedPostAndReactionAndUserRelationships = async () => {
         await postAndReactionAndUserRelationship.save();
       }
     }
+    console.log('🌱 All post and reaction and user relationships created 🌱');
   } catch (error) {
     console.error('Error deleting post and reaction and user relationships:', error);
   }
