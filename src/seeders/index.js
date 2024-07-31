@@ -12,7 +12,7 @@ import { seedReactions } from './reactions.js';
 import mongoose from 'mongoose';
 
 mongoose
-  .connect('mongodb+srv://yosuke:yorkkoji%401358@cluster0.a6sqv.mongodb.net/mekka-dev?retryWrites=true&w=majority', {
+  .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
