@@ -7,11 +7,12 @@ import { seedPosts } from './posts.js';
 import { seedPostAndTagRelationships } from './postAndTagRelationships.js';
 import { seedLogs } from './logs.js';
 import { seedPostAndReactionAndUserRelationships } from './postAndReactionAndUserRelationships.js';
+import { seedReactions } from './reactions.js';
 
 import mongoose from 'mongoose';
 
 mongoose
-  .connect('mongodb+srv://yosuke:yorkkoji%401358@cluster0.a6sqv.mongodb.net/mekka-dev?retryWrites=true&w=majority', {
+  .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -26,6 +27,7 @@ mongoose
 const main = async () => {
   await seedUsers();
   await seedSpaces();
+  await seedReactions();
   await seedSpaceAndUserRelationships();
   await seedTags();
   await seedContents();
