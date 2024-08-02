@@ -179,6 +179,36 @@ export const experimentVideo = async (request, response) => {
   }
 };
 
+const contentPromises = contentObjects.map(async (contentObject) => {
+  let fileName;
+  if (contentObject.type === 'photo') {
+    fileName = `${contentObject.fileName.split('.')[0]}.webp`;
+  } else if (contentObject.type === 'video') {
+    fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
+  }
+  const content = await Content.create({
+    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
+      contentObject.type === 'photo' ? 'photos' : 'videos'
+    }/${fileName}`,
+    type: contentObject.type,
+    duration: contentObject.duration,
+    createdBy,
+    createdAt,
+  });
+  if (contentObject.type === 'photo') {
+    const sharpedImageBinary = await sharpImage(contentObject.fileName);
+    await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
+    return content;
+  } else if (contentObject.type === 'video') {
+    const outputFileName = `optimized-${contentObject.fileName}`;
+    const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
+    const fileStream = fs.createReadStream(optimizedVideoFilePath);
+    await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
+    await unlinkFile(optimizedVideoFilePath);
+    return content;
+  }
+});
+
 // video様にthubnailを作りたいが、、、ffmpeg
 // そもそもcreatePostってどういうのだっけ？
 // 色々なdocument作る部分あって、整理しないといかんよな。。。
@@ -224,8 +254,34 @@ export const experimentVideo = async (request, response) => {
 //   }
 // }
 
-// そもそもtagのupdateとかやっているんだけどさ、、、これ必要かね。。。。
-// もう、log documentを作る様にしたから必要ないよね。。。
+const processContent = async (contentObject, createdBy, createdAt) => {
+  const fileNamePrefix = contentObject.fileName.split('.')[0];
+  const fileExtension = contentObject.type === 'photo' ? 'webp' : 'mp4';
+  const fileName = `${fileNamePrefix}.${fileExtension}`;
+
+  const contentFolder = contentObject.type === 'photo' ? 'photos' : 'videos';
+
+  const content = await Content.create({
+    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${contentFolder}/${fileName}`,
+    type: contentObject.type,
+    duration: contentObject.duration,
+    createdBy,
+  });
+
+  if (contentObject.type === 'photo') {
+    const sharpedImageBinary = await sharpImage(contentObject.fileName);
+    await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
+  } else if (contentObject.type === 'video') {
+    const outputFileName = `optimized-${contentObject.fileName}`;
+    const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
+    const fileStream = fs.createReadStream(optimizedVideoFilePath);
+    await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
+    await unlinkFile(optimizedVideoFilePath);
+  }
+
+  return content;
+};
+
 export const createPost = async (request, response) => {
   try {
     const {
@@ -241,51 +297,18 @@ export const createPost = async (request, response) => {
     } = request.body;
 
     const tagIds = JSON.parse(addedTagsJSON);
+    const contentObjects = JSON.parse(contentsJSON);
     if (!tagIds.length) {
       throw new Error('Required to have at least one tag.');
     }
+    if (!contentObjects.length) {
+      throw new Error('Required to have at least one content.');
+    }
     const location = JSON.parse(locationJSON);
     const createdTagObjects = JSON.parse(createdTagsJSON);
-    const contentObjects = JSON.parse(contentsJSON);
-
-    const contentIds = [];
-    // ここのlogic直書きやばいから分けた方がいい絶対に。。。
-    const contentPromises = contentObjects.map(async (contentObject) => {
-      let fileName;
-      if (contentObject.type === 'photo') {
-        fileName = `${contentObject.fileName.split('.')[0]}.webp`;
-      } else if (contentObject.type === 'video') {
-        // --- ver1 ffmpeg通す時のやつ
-        // fileName = `optimized-${contentObject.fileName.split('.')[0]}.mp4`;
-        // -----
-        fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
-      }
-      const content = await Content.create({
-        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-          contentObject.type === 'photo' ? 'photos' : 'videos'
-        }/${fileName}`,
-        type: contentObject.type,
-        duration: contentObject.duration,
-        createdBy,
-        createdAt,
-      });
-      contentIds.push(content._id);
-      if (contentObject.type === 'photo') {
-        const sharpedImageBinary = await sharpImage(contentObject.fileName);
-        await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
-        return content;
-      } else if (contentObject.type === 'video') {
-        const outputFileName = `optimized-${contentObject.fileName}`;
-        const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
-        const fileStream = fs.createReadStream(optimizedVideoFilePath);
-        // awsにuploadする。
-        await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-        await unlinkFile(optimizedVideoFilePath);
-        return content;
-      }
-    });
 
     // creation 1: content documentを作る。
+    const contentPromises = contentObjects.map((contentObject) => processContent(contentObject, createdBy, new Date()));
     const contentDocuments = await Promise.all(contentPromises);
 
     // creation 2: post documentを作る。
@@ -323,9 +346,7 @@ export const createPost = async (request, response) => {
 
     // creation 4:  postとtagのrelationshipをここで作る。
     if (tagIds.length) {
-      const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(
-        tagIds.map((tagId) => ({ post: post._id, tag: tagId }))
-      );
+      await PostAndTagRelationship.insertMany(tagIds.map((tagId) => ({ post: post._id, tag: tagId })));
     }
 
     // creation 5: どこのspaceでなんのtag channelで誰が更新したかのlogを作る。
