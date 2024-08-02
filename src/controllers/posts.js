@@ -179,37 +179,78 @@ export const experimentVideo = async (request, response) => {
   }
 };
 
+// video様にthubnailを作りたいが、、、ffmpeg
+// そもそもcreatePostってどういうのだっけ？
+// 色々なdocument作る部分あって、整理しないといかんよな。。。
+
+// notificationベットで分けた方がいいね。。。
+// let notificationTitle = '';
+
+// const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
+//   space: spaceId,
+//   user: { $ne: createdBy },
+// })
+//   .populate({ path: 'user' })
+//   .select({ pushToken: 1 });
+// const membersPushTokens = spaceAndUserRelationships.map((rel) => {
+//   return rel.user.pushToken;
+// });
+
+// const notificationData = {
+//   notificationType: 'Post',
+//   spaceId: spaceId,
+//   tagId: tagIds[0],
+// };
+
+// const chunks = expo.chunkPushNotifications(
+//   membersPushTokens.map((token) => ({
+//     to: token,
+//     sound: 'default',
+//     data: notificationData,
+//     title: 'Member has posted.',
+//     body: caption,
+//   }))
+// );
+
+// const tickets = [];
+
+// for (let chunk of chunks) {
+//   try {
+//     let receipts = await expo.sendPushNotificationsAsync(chunk);
+//     tickets.push(...receipts);
+//     console.log('Push notifications sent:', receipts);
+//   } catch (error) {
+//     console.error('Error sending push notification:', error);
+//   }
+// }
+
+// そもそもtagのupdateとかやっているんだけどさ、、、これ必要かね。。。。
+// もう、log documentを作る様にしたから必要ないよね。。。
 export const createPost = async (request, response) => {
   try {
     const {
-      caption,
-      createdBy,
-      spaceId,
-      addedTags,
-      createdTags,
-      createdLocationTag,
-      addedLocationTag,
-      contents,
-      type,
-      disappearAfter,
-      location,
+      caption, // stringのinput
+      createdBy, // stringのinput
+      spaceId, // stringのinput
+      addedTags: addedTagsJSON, // JSON型のinput
+      createdTags: createdTagsJSON,
+      contents: contentsJSON,
+      type, // stringでinputくる
+      disappearAfter, // stringでinputくる
+      location: locationJSON, // JSON型のinput
     } = request.body;
-    // 現在の時間にdissaperAfter(minute)を足した日時を出す。
-    // const parsedLocation = JSON.parse(location);
-    const createdAt = new Date();
-    const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
-    const parsedTags = JSON.parse(addedTags);
-    const parsedCreatedTags = JSON.parse(createdTags);
-    const parsedLocation = JSON.parse(location);
-    // const parsedLocationTag = JSON.parse(addedLocationTag);
-    const files = request.files;
+
+    const tagIds = JSON.parse(addedTagsJSON);
+    if (!tagIds.length) {
+      throw new Error('Required to have at least one tag.');
+    }
+    const location = JSON.parse(locationJSON);
+    const createdTagObjects = JSON.parse(createdTagsJSON);
+    const contentObjects = JSON.parse(contentsJSON);
+
     const contentIds = [];
-    // const contents = [];
-    console.log('these are contents ', JSON.parse(contents));
-    let parsedCreatedLocationTag;
-    console.log('request body from  ', request.body);
-    // まあ、一応動く。ただ、icon upload部分の動きも変わっちゃっている。そこを直さないといいかん。
-    const contentPromises = JSON.parse(contents).map(async (contentObject) => {
+    // ここのlogic直書きやばいから分けた方がいい絶対に。。。
+    const contentPromises = contentObjects.map(async (contentObject) => {
       let fileName;
       if (contentObject.type === 'photo') {
         fileName = `${contentObject.fileName.split('.')[0]}.webp`;
@@ -229,17 +270,11 @@ export const createPost = async (request, response) => {
         createdAt,
       });
       contentIds.push(content._id);
-      // // ここでsharpしてoutputする必要があって、そのoutputをawsにあげるっていう流れだよな。
-      // await uploadPhoto(content.fileName, content.type);
-      // return content;
-      // ここで場合わけをするか。photoかvideoか。
       if (contentObject.type === 'photo') {
         const sharpedImageBinary = await sharpImage(contentObject.fileName);
         await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
         return content;
       } else if (contentObject.type === 'video') {
-        // --- ver1
-        // ffmpegを通して、
         const outputFileName = `optimized-${contentObject.fileName}`;
         const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
         const fileStream = fs.createReadStream(optimizedVideoFilePath);
@@ -247,158 +282,60 @@ export const createPost = async (request, response) => {
         await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
         await unlinkFile(optimizedVideoFilePath);
         return content;
-        // ---
-
-        // ver2
-        // await uploadVideo(contentObject.fileName);
-        // return content;
       }
     });
 
+    // creation 1: content documentを作る。
     const contentDocuments = await Promise.all(contentPromises);
 
+    // creation 2: post documentを作る。
+    const disappearAt = new Date(new Date().getTime() + Number(disappearAfter) * 60 * 1000);
     const post = await Post.create({
-      contents: contentIds,
+      contents: contentDocuments.map((content) => content._id),
       type,
       caption,
       space: spaceId,
-      // locationTag: addingLocationTag ? addingLocationTag._id : null,
-      location: parsedLocation,
+      location,
       disappearAt: type === 'moment' ? disappearAt : null,
       createdBy,
-      createdAt,
     });
 
-    const tagIds = [];
-
-    // 4 新しいtagを作る、もし、createdTagsがあったら。
-    // ここは、多分tagの_idでやるべきだよね。。。
-    // nameがhashのiconを見つけて、その_idを埋め込む必要がある。。。
-    let createdTagDocuments;
     let tagObjects;
-    // client側でもうhashTagを持っておこうか。。。
-    if (parsedCreatedTags.length) {
-      tagObjects = parsedCreatedTags.map((tag) => {
-        return {
-          _id: new mongoose.Types.ObjectId(),
-          iconType: tag.iconType,
-          icon: tag.icon,
-          color: tag.color,
-          image: tag.image,
-          name: tag.name,
-          count: 1,
-          space: spaceId,
-          createdBy: createdBy,
-          updatedAt: new Date(),
-        };
+    if (createdTagObjects.length) {
+      const newTags = await Tag.insertMany(
+        createdTagObjects.map((tagObject) => {
+          return {
+            iconType: tagObject.iconType,
+            icon: tagObject.icon._id,
+            color: tagObject.color,
+            image: tagObject.image,
+            name: tagObject.name,
+            space: spaceId,
+            createdBy: createdBy,
+          };
+        })
+      );
+      newTags.forEach((tag) => {
+        tagIds.push(tag._id);
       });
-
-      const inserting = tagObjects.map((tagObject) => {
-        return {
-          _id: tagObject._id,
-          iconType: tagObject.iconType,
-          icon: tagObject.icon._id,
-          color: tagObject.color,
-          image: tagObject.image,
-          name: tagObject.name,
-          count: 1,
-          space: spaceId,
-          createdBy: createdBy,
-          updatedAt: new Date(),
-        };
-      });
-      // iconを、url付きで返したいのよ。
-      createdTagDocuments = await Tag.insertMany(inserting);
-      createdTagDocuments.forEach((tagDocument) => {
-        tagIds.push(tagDocument._id);
-      });
-      // ここでspaceも更新しないといかんのか。
-      const space = await Space.findById(spaceId);
-      const createdTagIds = createdTagDocuments.map((tag) => tag._id);
-      space.tags.push(...createdTagIds);
-      space.save();
+      tagObjects = await Tag.populate(newTags, 'icon');
     }
 
-    let addedExistingTags;
-    // だから、client側ではtagのidだけを入れておく感じな。
-    if (parsedTags.length) {
-      // parsedTags
-      const tags = await Tag.find({ _id: { $in: parsedTags } });
-      const updatePromises = tags.map((tag) => {
-        tag.count += 1;
-        tag.updatedAt = new Date();
-        return tag.save();
-      });
-
-      // Execute all update promises in parallel
-      await Promise.all(updatePromises);
-      tagIds.push(...parsedTags);
-      // parsedTags.forEach((tagId) => {
-      //   tagIds.push(tagId);
-      // });
-    }
-
-    // tagIdsをもとにpostAndTagのrelationshipを作る、もちろん最終的にtagIdsのlengthがあったらね。
-    // 最終的に、つけられたtagとpostのrelationshipを作る。
+    // creation 4:  postとtagのrelationshipをここで作る。
     if (tagIds.length) {
-      const postAndTagRelationshipObjects = tagIds.map((tagId) => {
-        return {
-          post: post._id,
-          tag: tagId,
-        };
-      });
-
-      const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
+      const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(
+        tagIds.map((tagId) => ({ post: post._id, tag: tagId }))
+      );
     }
 
-    const log = await Log.create({
+    // creation 5: どこのspaceでなんのtag channelで誰が更新したかのlogを作る。
+    await Log.create({
       space: spaceId,
       type: 'normal',
       post: post._id,
       tag: tagIds[0],
       createdBy: createdBy,
-      createdAt: new Date(),
     });
-
-    const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
-      space: spaceId,
-      user: { $ne: createdBy },
-    })
-      .populate({ path: 'user' })
-      .select({ pushToken: 1 });
-    const membersPushTokens = spaceAndUserRelationships.map((rel) => {
-      return rel.user.pushToken;
-    });
-
-    let notificationTitle = '';
-
-    const notificationData = {
-      notificationType: 'Post',
-      spaceId: spaceId,
-      tagId: tagIds[0],
-    };
-
-    const chunks = expo.chunkPushNotifications(
-      membersPushTokens.map((token) => ({
-        to: token,
-        sound: 'default',
-        data: notificationData,
-        title: 'Member has posted.',
-        body: caption,
-      }))
-    );
-
-    const tickets = [];
-
-    for (let chunk of chunks) {
-      try {
-        let receipts = await expo.sendPushNotificationsAsync(chunk);
-        tickets.push(...receipts);
-        console.log('Push notifications sent:', receipts);
-      } catch (error) {
-        console.error('Error sending push notification:', error);
-      }
-    }
 
     response.status(201).json({
       data: {
@@ -408,17 +345,16 @@ export const createPost = async (request, response) => {
           type: post.type,
           caption: post.caption,
           space: spaceId,
-          createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
+          createdBy: post.createdBy,
           createdAt: post.createdAt,
           disappearAt: post.disappearAt,
           totalComments: 0,
           totalReactions: 0,
         },
-        addedTags: [...parsedTags],
+        addedTags: [...tagIds],
         createdTags: tagObjects ? tagObjects : null,
       },
     });
-    // ---------------------
   } catch (error) {
     console.log(error);
     response.status(500).json({ error: 'An error occurred' });
@@ -491,45 +427,6 @@ export const createMoment = async (request, response) => {
       createdAt,
     });
 
-    // const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
-    //   space: spaceId,
-    //   user: { $ne: createdBy },
-    // })
-    //   .populate({ path: 'user' })
-    //   .select({ pushToken: 1 });
-    // const membersPushTokens = spaceAndUserRelationships.map((rel) => {
-    //   return rel.user.pushToken;
-    // });
-
-    // let notificationTitle = '';
-
-    // const notificationData = {
-    //   notificationType: 'Post',
-    //   spaceId: spaceId,
-    //   tagId: tagIds[0],
-    // };
-
-    // const chunks = expo.chunkPushNotifications(
-    //   membersPushTokens.map((token) => ({
-    //     to: token,
-    //     sound: 'default',
-    //     data: notificationData,
-    //     title: 'Member has posted.',
-    //     body: caption,
-    //   }))
-    // );
-
-    // const tickets = [];
-
-    // for (let chunk of chunks) {
-    //   try {
-    //     let receipts = await expo.sendPushNotificationsAsync(chunk);
-    //     tickets.push(...receipts);
-    //     console.log('Push notifications sent:', receipts);
-    //   } catch (error) {
-    //     console.error('Error sending push notification:', error);
-    //   }
-    // }
     const log = await Log.create({
       space: spaceId,
       type: 'moment',
