@@ -11,11 +11,6 @@ const storage = multer.diskStorage({
   },
   // これ、uuidも必要だな。
   filename: function (request, file, callback) {
-    // call backでfilenameしか次に送ってないけど、ここを改善すべきなんだろう。。。
-    let extension = file.mimetype === 'image/jpeg' ? 'png' : 'mp4'; // 写真の時、.jpg.pngってなっている。まあ最初はjpgだけでいいかも。videoの時もmov.mp4になっている。変えないといかん。
-    // const fileName = request.body.createdBy + '-' + uuidv4() + '-' + Date.now() + '.' + extension;
-    // const fileName = file.originalname + '.' + extension;
-    // console.log(fileName);
     callback(null, file.originalname); //
   },
 });
