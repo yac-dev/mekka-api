@@ -21,11 +21,12 @@ import ffmpeg from 'fluent-ffmpeg';
 import { Expo } from 'expo-server-sdk';
 import mongoose from 'mongoose';
 const expo = new Expo();
-const unlinkFile = util.promisify(fs.unlink);
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
+
+const unlinkFile = util.promisify(fs.unlink);
 
 // resolutionもinputにしようか。
 
@@ -107,9 +108,10 @@ export const experiment = async (request, response) => {
 
 export const experimentVideo = async (request, response) => {
   try {
-    const { videoFileName, thumbnailFileName } = await optimizeVideoNew(request.files[0]);
-    console.log('optimized video -> ', videoFileName);
-    console.log('optimized thumbnail -> ', thumbnailFileName);
+    console.log(request.body);
+    // const { videoFileName, thumbnailFileName } = await optimizeVideoNew(request.files[0]);
+    // console.log('optimized video -> ', videoFileName);
+    // console.log('optimized thumbnail -> ', thumbnailFileName);
 
     response.status(201).json({
       message: 'success',
@@ -168,9 +170,13 @@ const getFilePath = (fileName) => {
   return path.join(path.resolve(), 'buffer', fileName);
 };
 
+const removeFile = async (fileName) => {
+  const filePath = getFilePath(fileName);
+  await unlinkFile(filePath);
+};
+
 const optimizeImage = async (inputFileName, resolution) => {
   const fileInput = getFilePath(inputFileName);
-  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
   // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
   const processed = await sharp(fileInput)
     .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
@@ -209,14 +215,13 @@ const optimizeVideoNew = (fileObject) => {
 };
 // videoを作って、その後thumbnailもsharpする
 
-const processImage = async (contentObject, resolution) => {
+const processImage = async (fileName, resolution) => {
   // 1 imageを圧縮、
+  const imageBinary = await optimizeImage(fileName, resolution);
   // 2 そのimageをs3にuploadする。
+  await uploadContentToS3(fileName, 'photos', imageBinary);
   // 3 そのimageをunlinkする。
-  const imageBinary = await optimizeImage(contentObject.fileName, resolution);
-  await uploadContentToS3(contentObject.fileName, 'photos', imageBinary);
-  const originalFilePath = getFilePath(contentObject.fileName);
-  await unlinkFile(originalFilePath);
+  await removeFile(fileName);
 };
 
 export const processVideo = async (contentObject, thumbnailResolution) => {
@@ -229,40 +234,47 @@ export const processVideo = async (contentObject, thumbnailResolution) => {
   await uploadContentToS3(thumbnailFileName, 'photos', thumbnailBinary);
 
   // 3 そのvideoとthumbnailをunlinkする。
-  const originalVideoFilePath = getFilePath(contentObject.fileName);
-  const optimizedVideoFilePath = getFilePath(videoFileName);
-  const thumbnailFilePath = getFilePath(thumbnailFileName);
-  await unlinkFile(originalVideoFilePath);
-  await unlinkFile(optimizedVideoFilePath);
-  await unlinkFile(thumbnailFilePath);
+  await removeFile(contentObject.fileName);
+  await removeFile(videoFileName);
+  await removeFile(thumbnailFileName);
+
+  // const originalVideoFilePath = getFilePath(contentObject.fileName);
+  // const optimizedVideoFilePath = getFilePath(videoFileName);
+  // const thumbnailFilePath = getFilePath(thumbnailFileName);
+  // await unlinkFile(originalVideoFilePath);
+  // await unlinkFile(optimizedVideoFilePath);
+  // await unlinkFile(thumbnailFilePath);
 };
 
-const processContent = async (contentObject, createdBy, createdAt) => {
-  const fileNamePrefix = contentObject.fileName.split('.')[0];
-  const fileExtension = contentObject.type === 'photo' ? 'webp' : 'mp4';
-  const fileName = `${fileNamePrefix}.${fileExtension}`;
+// fileNameがごちゃごちゃしてない？？これももっと簡単にすべき。。。
+const processContent = async (contentObject) => {
+  // const fileNamePrefix = contentObject.fileName.split('.')[0];
+  // const fileExtension = contentObject.type === 'photo' ? 'webp' : 'mp4';
+  // const fileName = `${fileNamePrefix}.${fileExtension}`;
 
   const contentFolder = contentObject.type === 'photo' ? 'photos' : 'videos';
 
   const content = await Content.create({
-    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${contentFolder}/${fileName}`,
+    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${contentFolder}/${contentObject.fileName}`,
     type: contentObject.type,
     duration: contentObject.duration,
-    createdBy,
+    createdBy: contentObject.userId,
   });
 
   if (contentObject.type === 'photo') {
-    const sharpedImageBinary = await sharpImage(contentObject.fileName);
-    await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
+    await processImage(contentObject.fileName, { height: 1920, width: 1080 });
+    return content;
+    // const sharpedImageBinary = await sharpImage(contentObject.fileName);
+    // await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
   } else if (contentObject.type === 'video') {
-    const outputFileName = `optimized-${contentObject.fileName}`;
-    const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
-    const fileStream = fs.createReadStream(optimizedVideoFilePath);
-    await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-    await unlinkFile(optimizedVideoFilePath);
+    await processVideo(contentObject, { height: 500, width: 500 });
+    return content;
+    // const outputFileName = `optimized-${contentObject.fileName}`;
+    // const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
+    // const fileStream = fs.createReadStream(optimizedVideoFilePath);
+    // await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
+    // await unlinkFile(optimizedVideoFilePath);
   }
-
-  return content;
 };
 
 export const createPost = async (request, response) => {
@@ -292,7 +304,7 @@ export const createPost = async (request, response) => {
     const createdTagObjects = JSON.parse(createdTagsJSON);
 
     // creation 1: content documentを作る。
-    const contentPromises = contentObjects.map((contentObject) => processContent(contentObject, createdBy, new Date()));
+    const contentPromises = contentObjects.map((contentObject) => processContent(contentObject));
     const contentDocuments = await Promise.all(contentPromises);
 
     // creation 2: post documentを作る。
@@ -307,7 +319,7 @@ export const createPost = async (request, response) => {
       createdBy,
     });
 
-    // creation 3: 新しいtag documentを作る。
+    // // creation 3: 新しいtag documentを作る。
     let tagObjects;
     if (createdTagObjects.length) {
       const newTags = await Tag.insertMany(
