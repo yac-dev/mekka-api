@@ -26,38 +26,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
-// const optimizeVideo = (originalFileName, newFileName) => {
-//   const compressOptions = {
-//     videoCodec: 'libx264', // 使用するビデオコーデック
-//     audioCodec: 'aac', // 使用するオーディオコーデック
-//     size: '540x990', // 出力動画の解像度
-//   };
-//   const __dirname = path.resolve();
-//   const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
-//   const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-//   // const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
-//   return new Promise((resolve, reject) => {
-//     ffmpeg(inputFilePath)
-//       .outputOptions(['-q:v 1', '-q:a 1']) // クオリティの設定
-//       .videoCodec(compressOptions.videoCodec)
-//       .audioCodec(compressOptions.audioCodec)
-//       .size(compressOptions.size)
-//       .on('end', () => {
-//         resolve(outputFilePath);
-//         console.log('COMPRESS COMPLETED👏');
-//       })
-//       .on('error', (err) => {
-//         console.error('error happened🖕', err);
-//       })
-//       .save(outputFilePath);
-//   });
-// };
 
-// photo postと、video postで、場合わけをしないといけないな。。。
-// videoの場合は、ffmpeg通さないといけないから。
-// s3にも、これで入れられるのかみたいね。これ使えたら今までの無茶苦茶面倒臭いの全部なくなるから。。。
-
-const sharpImage = async (inputFileName) => {
+// resolutionもinputにしようか。
+const optimizeImage = async (inputFileName, resolution) => {
   const __dirname = path.resolve();
   const fileInput = path.join(__dirname, 'buffer', inputFileName);
   const outputFileName = `${inputFileName.split('.')[0]}.webp`;
@@ -65,13 +36,25 @@ const sharpImage = async (inputFileName) => {
   // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
   const processed = await sharp(fileInput)
     .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
-    .resize({ height: 1920, width: 1080, fit: 'contain' })
+    .resize({ height: resolution.height, width: resolution.width, fit: 'contain' })
     .webp({ quality: 1 })
     .toBuffer();
   return processed;
 };
 
+// videoを作って、videoのthumbnailも作る必要がある。
+// videoのthumbnailは、videoの1フレーム目を取ってくる。
+// ffmpegを使わなければいけない性質上、ここはmemoryよりもfileに書き出して、それをまた読み込んでっていう作業をせざるをえない。
+
 // ここもできれば、memory内で済ませたいができるんだろうか・・・？
+// これ、複数のvideo uploadとなると今は無理だわ。。。
+// 一つのvideo 処理するだけで手一杯ですわ。
+// 一つにしよう。そして、そのvideoのthumbnailも作る。
+// そして、そのvideoのthumbnailをawsにuploadする。
+// そして、そのvideoをawsにuploadする。
+// そして、そのvideoのthumbnailをawsにuploadする。
+
+// outputとして、最終的にvideoをthumbnailのfile pathを出す感じかな。
 const optimizeVideo = (originalFileName, newFileName) => {
   const compressOptions = {
     videoCodec: 'libx264', // 使用するビデオコーデック
@@ -81,7 +64,9 @@ const optimizeVideo = (originalFileName, newFileName) => {
   const __dirname = path.resolve();
   const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
   const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
+  const thumbnailPath = path.join(__dirname, 'buffer', `${newFileName.split('.')[0]}_thumbnail.jpg`);
+  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
   return new Promise((resolve, reject) => {
     exec(command, (err, stdout, stderr) => {
       if (err) console.log('Error ', err);
@@ -92,8 +77,6 @@ const optimizeVideo = (originalFileName, newFileName) => {
     });
   });
 };
-
-const processVideo = () => {};
 
 export const experiment = async (request, response) => {
   try {
@@ -135,41 +118,41 @@ export const experiment = async (request, response) => {
   }
 };
 
-const optimizeVideoNew = (inputBuffer) => {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    const ffmpegCommand = ffmpeg(inputBuffer)
-      .inputFormat('mp4') // Ensure the input format is specified
-      .videoCodec('libx264')
-      .audioCodec('aac')
-      .size('990x540')
-      .on('error', (err) => reject(err))
-      .on('end', () => resolve(Buffer.concat(chunks)))
-      .pipe();
+const optimizeVideoNew = (fileObject) => {
+  const __dirname = path.resolve();
+  const videoFileName = `${fileObject.originalname.split('.')[0]}-optimized.mp4`;
+  const thumbnailFileName = `${fileObject.originalname.split('.')[0]}_thumbnail.jpg`;
+  const videoPath = path.join(__dirname, 'buffer', videoFileName);
+  const thumbnailPath = path.join(__dirname, 'buffer', thumbnailFileName);
 
-    ffmpegCommand.on('data', (chunk) => chunks.push(chunk));
+  // const command = `ffmpeg -i ${fileObject.path} -vcodec h264 -b:v:v 2000k -acodec mp3 ${outputFilePath}`;
+  // const command = `ffmpeg -i ${fileObject.path} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 64k ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+  // const command = `ffmpeg -i ${fileObject.path} -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  // if statement使いたいけど、、動かん。。。
+  // const command = `ffmpeg -i ${fileObject.path} -vf "scale='if(gte(iw,ih),960:540,540:960)':force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  const command = `ffmpeg -i ${fileObject.path} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${videoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  return new Promise((resolve) => {
+    exec(command, (err) => {
+      if (err) console.log('Error ', err);
+      else {
+        resolve({
+          videoFileName,
+          thumbnailFileName,
+        });
+      }
+    });
   });
 };
+// videoを作って、その後thumbnailもsharpする。
 
 export const experimentVideo = async (request, response) => {
   try {
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
-    const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
-    const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
-
-    const videoName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
-
-    const s3 = new S3Client({
-      credentials: {
-        accessKeyId: bucketAccessKey,
-        secretAccessKey: bucketSecretKey,
-      },
-      region: bucketRegion,
-    });
-
-    const optimizedVideo = await optimizeVideoNew(request.file.buffer);
-    console.log(optimizedVideo);
+    const { videoFileName, thumbnailFileName } = await optimizeVideoNew(request.files[0]);
+    console.log('optimized video -> ', videoFileName);
+    console.log('optimized thumbnail -> ', thumbnailFileName);
 
     response.status(201).json({
       message: 'success',
@@ -179,35 +162,10 @@ export const experimentVideo = async (request, response) => {
   }
 };
 
-const contentPromises = contentObjects.map(async (contentObject) => {
-  let fileName;
-  if (contentObject.type === 'photo') {
-    fileName = `${contentObject.fileName.split('.')[0]}.webp`;
-  } else if (contentObject.type === 'video') {
-    fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
-  }
-  const content = await Content.create({
-    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-      contentObject.type === 'photo' ? 'photos' : 'videos'
-    }/${fileName}`,
-    type: contentObject.type,
-    duration: contentObject.duration,
-    createdBy,
-    createdAt,
-  });
-  if (contentObject.type === 'photo') {
-    const sharpedImageBinary = await sharpImage(contentObject.fileName);
-    await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
-    return content;
-  } else if (contentObject.type === 'video') {
-    const outputFileName = `optimized-${contentObject.fileName}`;
-    const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
-    const fileStream = fs.createReadStream(optimizedVideoFilePath);
-    await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-    await unlinkFile(optimizedVideoFilePath);
-    return content;
-  }
-});
+export const processVideo = async (fileObject, resolution) => {
+  const { thumbnailFileName } = await optimizeVideoNew(fileObject);
+  const optimizedImage = await optimizeImage(thumbnailFileName, resolution);
+};
 
 // video様にthubnailを作りたいが、、、ffmpeg
 // そもそもcreatePostってどういうのだっけ？
@@ -254,6 +212,11 @@ const contentPromises = contentObjects.map(async (contentObject) => {
 //   }
 // }
 
+const processImage = async (contentObject, resolution) => {
+  const result = await optimizeImage(contentObject.fileName, resolution);
+  await uploadPhoto(contentObject.fileName, fileName, content.type, result);
+};
+
 const processContent = async (contentObject, createdBy, createdAt) => {
   const fileNamePrefix = contentObject.fileName.split('.')[0];
   const fileExtension = contentObject.type === 'photo' ? 'webp' : 'mp4';
@@ -296,6 +259,7 @@ export const createPost = async (request, response) => {
       location: locationJSON, // JSON型のinput
     } = request.body;
 
+    // --- validation ---
     const tagIds = JSON.parse(addedTagsJSON);
     const contentObjects = JSON.parse(contentsJSON);
     if (!tagIds.length) {
@@ -323,6 +287,7 @@ export const createPost = async (request, response) => {
       createdBy,
     });
 
+    // creation 3: 新しいtag documentを作る。
     let tagObjects;
     if (createdTagObjects.length) {
       const newTags = await Tag.insertMany(
