@@ -68,6 +68,21 @@ export const uploadPhoto = async (originalFileName, outputFileName, contentType,
   await unlinkFile(originalFilePath);
 };
 
+// あくまで、s3へのuploadだけにしたいねここの役割は、ということで。、
+export const uploadContentToS3 = async (outputFileName, type, binaryData) => {
+  let Key = `${type}/${outputFileName}`;
+  const uploadParams = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Body: binaryData,
+    Key: Key,
+  };
+  await new Upload({
+    client: s3,
+    params: uploadParams,
+  }).done();
+  console.log('📀 content uploaded 📀');
+};
+
 export const uploadIcon = async (fileName) => {
   const __dirname = path.resolve();
   const originalFilePath = path.join(__dirname, 'buffer', fileName);

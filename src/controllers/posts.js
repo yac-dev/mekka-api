@@ -9,7 +9,7 @@ import LocationTag from '../models/locationTag.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
 import SpaceUpdateLog from '../models/spaceUpdateLog.js';
 import TagUpdateLog from '../models/tagUpdateLog.js';
-import { uploadPhoto, uploadVideo } from '../services/s3.js';
+import { uploadPhoto, uploadVideo, uploadContentToS3 } from '../services/s3.js';
 import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs';
@@ -21,79 +21,12 @@ import ffmpeg from 'fluent-ffmpeg';
 import { Expo } from 'expo-server-sdk';
 import mongoose from 'mongoose';
 const expo = new Expo();
-const unlinkFile = util.promisify(fs.unlink);
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
-// const optimizeVideo = (originalFileName, newFileName) => {
-//   const compressOptions = {
-//     videoCodec: 'libx264', // 使用するビデオコーデック
-//     audioCodec: 'aac', // 使用するオーディオコーデック
-//     size: '540x990', // 出力動画の解像度
-//   };
-//   const __dirname = path.resolve();
-//   const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
-//   const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-//   // const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
-//   return new Promise((resolve, reject) => {
-//     ffmpeg(inputFilePath)
-//       .outputOptions(['-q:v 1', '-q:a 1']) // クオリティの設定
-//       .videoCodec(compressOptions.videoCodec)
-//       .audioCodec(compressOptions.audioCodec)
-//       .size(compressOptions.size)
-//       .on('end', () => {
-//         resolve(outputFilePath);
-//         console.log('COMPRESS COMPLETED👏');
-//       })
-//       .on('error', (err) => {
-//         console.error('error happened🖕', err);
-//       })
-//       .save(outputFilePath);
-//   });
-// };
 
-// photo postと、video postで、場合わけをしないといけないな。。。
-// videoの場合は、ffmpeg通さないといけないから。
-// s3にも、これで入れられるのかみたいね。これ使えたら今までの無茶苦茶面倒臭いの全部なくなるから。。。
-
-const sharpImage = async (inputFileName) => {
-  const __dirname = path.resolve();
-  const fileInput = path.join(__dirname, 'buffer', inputFileName);
-  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
-  const outputPath = path.join(__dirname, 'buffer', outputFileName);
-  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
-  const processed = await sharp(fileInput)
-    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
-    .resize({ height: 1920, width: 1080, fit: 'contain' })
-    .webp({ quality: 1 })
-    .toBuffer();
-  return processed;
-};
-
-// ここもできれば、memory内で済ませたいができるんだろうか・・・？
-const optimizeVideo = (originalFileName, newFileName) => {
-  const compressOptions = {
-    videoCodec: 'libx264', // 使用するビデオコーデック
-    audioCodec: 'aac', // 使用するオーディオコーデック
-    size: '990x540', // 出力動画の解像度
-  };
-  const __dirname = path.resolve();
-  const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
-  const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath}`;
-  return new Promise((resolve, reject) => {
-    exec(command, (err, stdout, stderr) => {
-      if (err) console.log('Error ', err);
-      else {
-        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
-        resolve(outputFilePath);
-      }
-    });
-  });
-};
-
-const processVideo = () => {};
+const unlinkFile = util.promisify(fs.unlink);
 
 export const experiment = async (request, response) => {
   try {
@@ -135,41 +68,12 @@ export const experiment = async (request, response) => {
   }
 };
 
-const optimizeVideoNew = (inputBuffer) => {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    const ffmpegCommand = ffmpeg(inputBuffer)
-      .inputFormat('mp4') // Ensure the input format is specified
-      .videoCodec('libx264')
-      .audioCodec('aac')
-      .size('990x540')
-      .on('error', (err) => reject(err))
-      .on('end', () => resolve(Buffer.concat(chunks)))
-      .pipe();
-
-    ffmpegCommand.on('data', (chunk) => chunks.push(chunk));
-  });
-};
-
 export const experimentVideo = async (request, response) => {
   try {
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
-    const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
-    const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
-
-    const videoName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
-
-    const s3 = new S3Client({
-      credentials: {
-        accessKeyId: bucketAccessKey,
-        secretAccessKey: bucketSecretKey,
-      },
-      region: bucketRegion,
-    });
-
-    const optimizedVideo = await optimizeVideoNew(request.file.buffer);
-    console.log(optimizedVideo);
+    console.log(request.body);
+    // const { videoFileName, thumbnailFileName } = await optimizeVideoNew(request.files[0]);
+    // console.log('optimized video -> ', videoFileName);
+    // console.log('optimized thumbnail -> ', thumbnailFileName);
 
     response.status(201).json({
       message: 'success',
@@ -179,226 +83,225 @@ export const experimentVideo = async (request, response) => {
   }
 };
 
+// notificationベットで分けた方がいいね。。。
+// let notificationTitle = '';
+
+// const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
+//   space: spaceId,
+//   user: { $ne: createdBy },
+// })
+//   .populate({ path: 'user' })
+//   .select({ pushToken: 1 });
+// const membersPushTokens = spaceAndUserRelationships.map((rel) => {
+//   return rel.user.pushToken;
+// });
+
+// const notificationData = {
+//   notificationType: 'Post',
+//   spaceId: spaceId,
+//   tagId: tagIds[0],
+// };
+
+// const chunks = expo.chunkPushNotifications(
+//   membersPushTokens.map((token) => ({
+//     to: token,
+//     sound: 'default',
+//     data: notificationData,
+//     title: 'Member has posted.',
+//     body: caption,
+//   }))
+// );
+
+// const tickets = [];
+
+// for (let chunk of chunks) {
+//   try {
+//     let receipts = await expo.sendPushNotificationsAsync(chunk);
+//     tickets.push(...receipts);
+//     console.log('Push notifications sent:', receipts);
+//   } catch (error) {
+//     console.error('Error sending push notification:', error);
+//   }
+// }
+
+const getFilePath = (fileName) => {
+  return path.join(path.resolve(), 'buffer', fileName);
+};
+
+const removeFile = async (fileName) => {
+  const filePath = getFilePath(fileName);
+  await unlinkFile(filePath);
+};
+
+const optimizeImage = async (inputFileName, resolution) => {
+  const fileInput = getFilePath(inputFileName);
+  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
+  const processed = await sharp(fileInput)
+    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
+    .resize({ height: resolution.height, width: resolution.width, fit: 'contain' })
+    .webp({ quality: 1 })
+    .toBuffer();
+  return processed;
+};
+
+const optimizeVideoNew = (fileName) => {
+  const optimizedVideoFileName = `${fileName.split('.')[0]}-optimized.mp4`;
+  const thumbnailFileName = `${fileName.split('.')[0]}_thumbnail.webp`;
+  const originalVideoPath = getFilePath(fileName);
+  const optimizedVideoPath = getFilePath(optimizedVideoFileName);
+  const thumbnailPath = getFilePath(thumbnailFileName);
+
+  // 元々使ってたやつ
+  // const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  // const command = `ffmpeg -i ${fileObject.path} -vcodec h264 -b:v:v 2000k -acodec mp3 ${outputFilePath}`;
+  // const command = `ffmpeg -i ${fileObject.path} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 64k ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+  // const command = `ffmpeg -i ${fileObject.path} -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  // if statement使いたいけど、、動かん。。。
+  // const command = `ffmpeg -i ${fileObject.path} -vf "scale='if(gte(iw,ih),960:540,540:960)':force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  const command = `ffmpeg -i ${originalVideoPath} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${optimizedVideoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  return new Promise((resolve) => {
+    exec(command, (err) => {
+      if (err) console.log('Error ', err);
+      else {
+        resolve({
+          optimizedVideoFileName,
+          thumbnailFileName,
+        });
+      }
+    });
+  });
+};
+
+const processImage = async (fileName, resolution) => {
+  // 1 imageを圧縮、
+  const imageBinary = await optimizeImage(fileName, resolution);
+  // 2 そのimageをs3にuploadする。
+  await uploadContentToS3(fileName, 'photos', imageBinary);
+  // 3 そのimageをunlinkする。
+  await removeFile(fileName);
+};
+
+export const processVideo = async (originalFileName, thumbnailResolution) => {
+  // 1 video圧縮 + thumbnail作成。
+  const { thumbnailFileName, optimizedVideoFileName } = await optimizeVideoNew(originalFileName);
+  const videoBinary = fs.createReadStream(getFilePath(optimizedVideoFileName));
+  const thumbnailBinary = await optimizeImage(thumbnailFileName, thumbnailResolution);
+  // 2 そのvideoとthumbnailをs3にuploadする。
+  await uploadContentToS3(originalFileName, 'videos', videoBinary);
+  await uploadContentToS3(thumbnailFileName, 'photos', thumbnailBinary);
+
+  // 3 そのvideoとthumbnailをunlinkする。
+  await removeFile(originalFileName);
+  await removeFile(optimizedVideoFileName);
+  await removeFile(thumbnailFileName);
+};
+
+// fileNameがごちゃごちゃしてない？？これももっと簡単にすべき。。。
+const processContent = async (contentObject) => {
+  const contentFolder = contentObject.type === 'photo' ? 'photos' : 'videos';
+  const thumbnailFileName = `${contentObject.fileName.split('.')[0]}_thumbnail.webp`;
+
+  const content = await Content.create({
+    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${contentFolder}/${contentObject.fileName}`,
+    type: contentObject.type,
+    duration: contentObject.duration,
+    createdBy: contentObject.userId,
+    thumbnail:
+      contentObject.type === 'video'
+        ? `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/photos/${thumbnailFileName}`
+        : null,
+  });
+
+  if (contentObject.type === 'photo') {
+    await processImage(contentObject.fileName, { height: 1920, width: 1080 });
+    return content;
+  } else if (contentObject.type === 'video') {
+    await processVideo(contentObject.fileName, { height: 1000, width: 1000 });
+    return content;
+  }
+};
+
 export const createPost = async (request, response) => {
   try {
     const {
-      caption,
-      createdBy,
-      spaceId,
-      addedTags,
-      createdTags,
-      createdLocationTag,
-      addedLocationTag,
-      contents,
-      type,
-      disappearAfter,
-      location,
+      caption, // stringのinput
+      createdBy, // stringのinput
+      spaceId, // stringのinput
+      addedTags: addedTagsJSON, // JSON型のinput
+      createdTags: createdTagsJSON,
+      contents: contentsJSON,
+      type, // stringでinputくる
+      disappearAfter, // stringでinputくる
+      location: locationJSON, // JSON型のinput
     } = request.body;
-    // 現在の時間にdissaperAfter(minute)を足した日時を出す。
-    // const parsedLocation = JSON.parse(location);
-    const createdAt = new Date();
-    const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
-    const parsedTags = JSON.parse(addedTags);
-    const parsedCreatedTags = JSON.parse(createdTags);
-    const parsedLocation = JSON.parse(location);
-    // const parsedLocationTag = JSON.parse(addedLocationTag);
-    const files = request.files;
-    const contentIds = [];
-    // const contents = [];
-    console.log('these are contents ', JSON.parse(contents));
-    let parsedCreatedLocationTag;
-    console.log('request body from  ', request.body);
-    // まあ、一応動く。ただ、icon upload部分の動きも変わっちゃっている。そこを直さないといいかん。
-    const contentPromises = JSON.parse(contents).map(async (contentObject) => {
-      let fileName;
-      if (contentObject.type === 'photo') {
-        fileName = `${contentObject.fileName.split('.')[0]}.webp`;
-      } else if (contentObject.type === 'video') {
-        // --- ver1 ffmpeg通す時のやつ
-        // fileName = `optimized-${contentObject.fileName.split('.')[0]}.mp4`;
-        // -----
-        fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
-      }
-      const content = await Content.create({
-        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-          contentObject.type === 'photo' ? 'photos' : 'videos'
-        }/${fileName}`,
-        type: contentObject.type,
-        duration: contentObject.duration,
-        createdBy,
-        createdAt,
-      });
-      contentIds.push(content._id);
-      // // ここでsharpしてoutputする必要があって、そのoutputをawsにあげるっていう流れだよな。
-      // await uploadPhoto(content.fileName, content.type);
-      // return content;
-      // ここで場合わけをするか。photoかvideoか。
-      if (contentObject.type === 'photo') {
-        const sharpedImageBinary = await sharpImage(contentObject.fileName);
-        await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
-        return content;
-      } else if (contentObject.type === 'video') {
-        // --- ver1
-        // ffmpegを通して、
-        const outputFileName = `optimized-${contentObject.fileName}`;
-        const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
-        const fileStream = fs.createReadStream(optimizedVideoFilePath);
-        // awsにuploadする。
-        await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-        await unlinkFile(optimizedVideoFilePath);
-        return content;
-        // ---
 
-        // ver2
-        // await uploadVideo(contentObject.fileName);
-        // return content;
-      }
-    });
+    // --- validation ---
+    const tagIds = JSON.parse(addedTagsJSON);
+    const contentObjects = JSON.parse(contentsJSON);
+    if (!tagIds.length) {
+      throw new Error('Required to have at least one tag.');
+    }
+    if (!contentObjects.length) {
+      throw new Error('Required to have at least one content.');
+    }
+    const location = JSON.parse(locationJSON);
+    const createdTagObjects = JSON.parse(createdTagsJSON);
 
+    // creation 1: content documentを作る。
+    const contentPromises = contentObjects.map((contentObject) => processContent(contentObject));
     const contentDocuments = await Promise.all(contentPromises);
 
+    // creation 2: post documentを作る。
+    const disappearAt = new Date(new Date().getTime() + Number(disappearAfter) * 60 * 1000);
     const post = await Post.create({
-      contents: contentIds,
+      contents: contentDocuments.map((content) => content._id),
       type,
       caption,
       space: spaceId,
-      // locationTag: addingLocationTag ? addingLocationTag._id : null,
-      location: parsedLocation,
+      location,
       disappearAt: type === 'moment' ? disappearAt : null,
       createdBy,
-      createdAt,
     });
 
-    const tagIds = [];
-
-    // 4 新しいtagを作る、もし、createdTagsがあったら。
-    // ここは、多分tagの_idでやるべきだよね。。。
-    // nameがhashのiconを見つけて、その_idを埋め込む必要がある。。。
-    let createdTagDocuments;
+    // creation 3: 新しいtag documentを作る。
     let tagObjects;
-    // client側でもうhashTagを持っておこうか。。。
-    if (parsedCreatedTags.length) {
-      tagObjects = parsedCreatedTags.map((tag) => {
-        return {
-          _id: new mongoose.Types.ObjectId(),
-          iconType: tag.iconType,
-          icon: tag.icon,
-          color: tag.color,
-          image: tag.image,
-          name: tag.name,
-          count: 1,
-          space: spaceId,
-          createdBy: createdBy,
-          updatedAt: new Date(),
-        };
+    if (createdTagObjects.length) {
+      const newTags = await Tag.insertMany(
+        createdTagObjects.map((tagObject) => {
+          return {
+            iconType: tagObject.iconType,
+            icon: tagObject.icon._id,
+            color: tagObject.color,
+            image: tagObject.image,
+            name: tagObject.name,
+            space: spaceId,
+            createdBy: createdBy,
+          };
+        })
+      );
+      newTags.forEach((tag) => {
+        tagIds.push(tag._id);
       });
-
-      const inserting = tagObjects.map((tagObject) => {
-        return {
-          _id: tagObject._id,
-          iconType: tagObject.iconType,
-          icon: tagObject.icon._id,
-          color: tagObject.color,
-          image: tagObject.image,
-          name: tagObject.name,
-          count: 1,
-          space: spaceId,
-          createdBy: createdBy,
-          updatedAt: new Date(),
-        };
-      });
-      // iconを、url付きで返したいのよ。
-      createdTagDocuments = await Tag.insertMany(inserting);
-      createdTagDocuments.forEach((tagDocument) => {
-        tagIds.push(tagDocument._id);
-      });
-      // ここでspaceも更新しないといかんのか。
-      const space = await Space.findById(spaceId);
-      const createdTagIds = createdTagDocuments.map((tag) => tag._id);
-      space.tags.push(...createdTagIds);
-      space.save();
+      tagObjects = await Tag.populate(newTags, 'icon');
     }
 
-    let addedExistingTags;
-    // だから、client側ではtagのidだけを入れておく感じな。
-    if (parsedTags.length) {
-      // parsedTags
-      const tags = await Tag.find({ _id: { $in: parsedTags } });
-      const updatePromises = tags.map((tag) => {
-        tag.count += 1;
-        tag.updatedAt = new Date();
-        return tag.save();
-      });
-
-      // Execute all update promises in parallel
-      await Promise.all(updatePromises);
-      tagIds.push(...parsedTags);
-      // parsedTags.forEach((tagId) => {
-      //   tagIds.push(tagId);
-      // });
-    }
-
-    // tagIdsをもとにpostAndTagのrelationshipを作る、もちろん最終的にtagIdsのlengthがあったらね。
-    // 最終的に、つけられたtagとpostのrelationshipを作る。
+    // creation 4:  postとtagのrelationshipをここで作る。
     if (tagIds.length) {
-      const postAndTagRelationshipObjects = tagIds.map((tagId) => {
-        return {
-          post: post._id,
-          tag: tagId,
-        };
-      });
-
-      const postAndTagRelationshipDocuments = await PostAndTagRelationship.insertMany(postAndTagRelationshipObjects);
+      await PostAndTagRelationship.insertMany(tagIds.map((tagId) => ({ post: post._id, tag: tagId })));
     }
 
-    const log = await Log.create({
+    // creation 5: どこのspaceでなんのtag channelで誰が更新したかのlogを作る。
+    await Log.create({
       space: spaceId,
       type: 'normal',
       post: post._id,
       tag: tagIds[0],
       createdBy: createdBy,
-      createdAt: new Date(),
     });
-
-    const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
-      space: spaceId,
-      user: { $ne: createdBy },
-    })
-      .populate({ path: 'user' })
-      .select({ pushToken: 1 });
-    const membersPushTokens = spaceAndUserRelationships.map((rel) => {
-      return rel.user.pushToken;
-    });
-
-    let notificationTitle = '';
-
-    const notificationData = {
-      notificationType: 'Post',
-      spaceId: spaceId,
-      tagId: tagIds[0],
-    };
-
-    const chunks = expo.chunkPushNotifications(
-      membersPushTokens.map((token) => ({
-        to: token,
-        sound: 'default',
-        data: notificationData,
-        title: 'Member has posted.',
-        body: caption,
-      }))
-    );
-
-    const tickets = [];
-
-    for (let chunk of chunks) {
-      try {
-        let receipts = await expo.sendPushNotificationsAsync(chunk);
-        tickets.push(...receipts);
-        console.log('Push notifications sent:', receipts);
-      } catch (error) {
-        console.error('Error sending push notification:', error);
-      }
-    }
 
     response.status(201).json({
       data: {
@@ -408,17 +311,16 @@ export const createPost = async (request, response) => {
           type: post.type,
           caption: post.caption,
           space: spaceId,
-          createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
+          createdBy: post.createdBy,
           createdAt: post.createdAt,
           disappearAt: post.disappearAt,
           totalComments: 0,
           totalReactions: 0,
         },
-        addedTags: [...parsedTags],
+        addedTags: [...tagIds],
         createdTags: tagObjects ? tagObjects : null,
       },
     });
-    // ---------------------
   } catch (error) {
     console.log(error);
     response.status(500).json({ error: 'An error occurred' });
@@ -491,45 +393,6 @@ export const createMoment = async (request, response) => {
       createdAt,
     });
 
-    // const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
-    //   space: spaceId,
-    //   user: { $ne: createdBy },
-    // })
-    //   .populate({ path: 'user' })
-    //   .select({ pushToken: 1 });
-    // const membersPushTokens = spaceAndUserRelationships.map((rel) => {
-    //   return rel.user.pushToken;
-    // });
-
-    // let notificationTitle = '';
-
-    // const notificationData = {
-    //   notificationType: 'Post',
-    //   spaceId: spaceId,
-    //   tagId: tagIds[0],
-    // };
-
-    // const chunks = expo.chunkPushNotifications(
-    //   membersPushTokens.map((token) => ({
-    //     to: token,
-    //     sound: 'default',
-    //     data: notificationData,
-    //     title: 'Member has posted.',
-    //     body: caption,
-    //   }))
-    // );
-
-    // const tickets = [];
-
-    // for (let chunk of chunks) {
-    //   try {
-    //     let receipts = await expo.sendPushNotificationsAsync(chunk);
-    //     tickets.push(...receipts);
-    //     console.log('Push notifications sent:', receipts);
-    //   } catch (error) {
-    //     console.error('Error sending push notification:', error);
-    //   }
-    // }
     const log = await Log.create({
       space: spaceId,
       type: 'moment',
