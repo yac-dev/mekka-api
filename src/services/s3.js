@@ -69,20 +69,8 @@ export const uploadPhoto = async (originalFileName, outputFileName, contentType,
 };
 
 // あくまで、s3へのuploadだけにしたいねここの役割は、ということで。、
-export const uploadContentToS3 = async (originalFileName, outputFileName, contentType, binaryData) => {
-  const __dirname = path.resolve();
-  const originalFilePath = path.join(__dirname, 'buffer', originalFileName);
-  // const fileStream = fs.createReadStream(filePath);
-
-  let Key;
-  if (contentType === 'icon') {
-    Key = `icons/${outputFileName}`;
-  } else if (contentType === 'photo') {
-    Key = `photos/${outputFileName}`;
-  } else if (contentType === 'video') {
-    Key = `videos/${outputFileName}`;
-  }
-
+export const uploadContentToS3 = async (outputFileName, type, binaryData) => {
+  let Key = `${type}/${outputFileName}`;
   const uploadParams = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
     Body: binaryData,
@@ -92,9 +80,7 @@ export const uploadContentToS3 = async (originalFileName, outputFileName, conten
     client: s3,
     params: uploadParams,
   }).done();
-  console.log('content uploaded');
-
-  await unlinkFile(originalFilePath);
+  console.log('📀 content uploaded 📀');
 };
 
 export const uploadIcon = async (fileName) => {
