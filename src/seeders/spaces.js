@@ -12,7 +12,7 @@ const spaces = [
     secretKey: '123456789012',
     contentType: 'photoAndVideo',
     description: 'This is the space 1',
-    videoLength: 20,
+    videoLength: 120,
     disappearAfter: 1439,
     isPublic: false,
     isCommentAvailable: true,

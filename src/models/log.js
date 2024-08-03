@@ -24,7 +24,10 @@ const logSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User',
   },
-  createdAt: Date,
+  createdAt: {
+    type: Date,
+    default: new Date(),
+  },
 });
 
 const Log = mongoose.model('Log', logSchema);

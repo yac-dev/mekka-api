@@ -1,16 +1,27 @@
 import mongoose from 'mongoose';
 
 const postSchema = mongoose.Schema({
-  contents: [{ type: mongoose.Schema.ObjectId, ref: 'Content' }],
+  contents: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Content',
+    },
+  ],
   type: {
     type: String,
     enum: ['normal', 'moment'],
   },
-  caption: String,
-  // locationTag: { type: mongoose.Schema.ObjectId, ref: 'LocationTag' }, // これは一つのみ。
-  space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
-  createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
-  createdAt: Date,
+  caption: {
+    type: String,
+  },
+  space: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Space',
+  },
+  createdBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+  },
   location: {
     type: {
       type: String,
@@ -19,11 +30,13 @@ const postSchema = mongoose.Schema({
     },
     coordinates: [Number],
   },
-  disappearAt: Date,
-  // typeormで、mongodb用とかだといいよなー。。
-  // disappearAt: Date, // もしくはnull
-
-  // tags: [{ type: mongoose.Schema.ObjectId, ref: 'Tag' }],
+  disappearAt: {
+    type: Date,
+  },
+  createdAt: {
+    type: Date,
+    default: new Date(),
+  },
 });
 
 const Post = mongoose.model('Post', postSchema);
