@@ -9,7 +9,7 @@ import LocationTag from '../models/locationTag.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
 import SpaceUpdateLog from '../models/spaceUpdateLog.js';
 import TagUpdateLog from '../models/tagUpdateLog.js';
-import { uploadPhoto, uploadVideo } from '../services/s3.js';
+import { uploadPhoto, uploadVideo, uploadContentToS3 } from '../services/s3.js';
 import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs';
@@ -28,19 +28,6 @@ import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAnd
 import Reaction from '../models/reaction.js';
 
 // resolutionもinputにしようか。
-const optimizeImage = async (inputFileName, resolution) => {
-  const __dirname = path.resolve();
-  const fileInput = path.join(__dirname, 'buffer', inputFileName);
-  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
-  const outputPath = path.join(__dirname, 'buffer', outputFileName);
-  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
-  const processed = await sharp(fileInput)
-    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
-    .resize({ height: resolution.height, width: resolution.width, fit: 'contain' })
-    .webp({ quality: 1 })
-    .toBuffer();
-  return processed;
-};
 
 // videoを作って、videoのthumbnailも作る必要がある。
 // videoのthumbnailは、videoの1フレーム目を取ってくる。
@@ -118,36 +105,6 @@ export const experiment = async (request, response) => {
   }
 };
 
-const optimizeVideoNew = (fileObject) => {
-  const __dirname = path.resolve();
-  const videoFileName = `${fileObject.originalname.split('.')[0]}-optimized.mp4`;
-  const thumbnailFileName = `${fileObject.originalname.split('.')[0]}_thumbnail.jpg`;
-  const videoPath = path.join(__dirname, 'buffer', videoFileName);
-  const thumbnailPath = path.join(__dirname, 'buffer', thumbnailFileName);
-
-  // const command = `ffmpeg -i ${fileObject.path} -vcodec h264 -b:v:v 2000k -acodec mp3 ${outputFilePath}`;
-  // const command = `ffmpeg -i ${fileObject.path} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 64k ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
-  // const command = `ffmpeg -i ${fileObject.path} -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
-
-  // if statement使いたいけど、、動かん。。。
-  // const command = `ffmpeg -i ${fileObject.path} -vf "scale='if(gte(iw,ih),960:540,540:960)':force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
-
-  const command = `ffmpeg -i ${fileObject.path} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${videoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
-
-  return new Promise((resolve) => {
-    exec(command, (err) => {
-      if (err) console.log('Error ', err);
-      else {
-        resolve({
-          videoFileName,
-          thumbnailFileName,
-        });
-      }
-    });
-  });
-};
-// videoを作って、その後thumbnailもsharpする。
-
 export const experimentVideo = async (request, response) => {
   try {
     const { videoFileName, thumbnailFileName } = await optimizeVideoNew(request.files[0]);
@@ -160,11 +117,6 @@ export const experimentVideo = async (request, response) => {
   } catch (error) {
     console.log(error);
   }
-};
-
-export const processVideo = async (fileObject, resolution) => {
-  const { thumbnailFileName } = await optimizeVideoNew(fileObject);
-  const optimizedImage = await optimizeImage(thumbnailFileName, resolution);
 };
 
 // video様にthubnailを作りたいが、、、ffmpeg
@@ -212,9 +164,77 @@ export const processVideo = async (fileObject, resolution) => {
 //   }
 // }
 
+const getFilePath = (fileName) => {
+  return path.join(path.resolve(), 'buffer', fileName);
+};
+
+const optimizeImage = async (inputFileName, resolution) => {
+  const fileInput = getFilePath(inputFileName);
+  const outputFileName = `${inputFileName.split('.')[0]}.webp`;
+  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
+  const processed = await sharp(fileInput)
+    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
+    .resize({ height: resolution.height, width: resolution.width, fit: 'contain' })
+    .webp({ quality: 1 })
+    .toBuffer();
+  return processed;
+};
+
+const optimizeVideoNew = (fileObject) => {
+  const videoFileName = `${fileObject.originalname.split('.')[0]}-optimized.mp4`;
+  const thumbnailFileName = `${fileObject.originalname.split('.')[0]}_thumbnail.jpg`;
+  const videoPath = getFilePath(videoFileName);
+  const thumbnailPath = getFilePath(thumbnailFileName);
+
+  // const command = `ffmpeg -i ${fileObject.path} -vcodec h264 -b:v:v 2000k -acodec mp3 ${outputFilePath}`;
+  // const command = `ffmpeg -i ${fileObject.path} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 64k ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+  // const command = `ffmpeg -i ${fileObject.path} -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  // if statement使いたいけど、、動かん。。。
+  // const command = `ffmpeg -i ${fileObject.path} -vf "scale='if(gte(iw,ih),960:540,540:960)':force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  const command = `ffmpeg -i ${fileObject.path} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${videoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  return new Promise((resolve) => {
+    exec(command, (err) => {
+      if (err) console.log('Error ', err);
+      else {
+        resolve({
+          videoFileName,
+          thumbnailFileName,
+        });
+      }
+    });
+  });
+};
+// videoを作って、その後thumbnailもsharpする
+
 const processImage = async (contentObject, resolution) => {
-  const result = await optimizeImage(contentObject.fileName, resolution);
-  await uploadPhoto(contentObject.fileName, fileName, content.type, result);
+  // 1 imageを圧縮、
+  // 2 そのimageをs3にuploadする。
+  // 3 そのimageをunlinkする。
+  const imageBinary = await optimizeImage(contentObject.fileName, resolution);
+  await uploadContentToS3(contentObject.fileName, 'photos', imageBinary);
+  const originalFilePath = getFilePath(contentObject.fileName);
+  await unlinkFile(originalFilePath);
+};
+
+export const processVideo = async (contentObject, thumbnailResolution) => {
+  // 1 video圧縮 + thumbnail作成。
+  const { thumbnailFileName, videoFileName } = await optimizeVideoNew(contentObject);
+  const videoBinary = fs.createReadStream(getFilePath(videoFileName));
+  const thumbnailBinary = await optimizeImage(thumbnailFileName, thumbnailResolution);
+  // 2 そのvideoとthumbnailをs3にuploadする。
+  await uploadContentToS3(contentObject.fileName, 'videos', videoBinary);
+  await uploadContentToS3(thumbnailFileName, 'photos', thumbnailBinary);
+
+  // 3 そのvideoとthumbnailをunlinkする。
+  const originalVideoFilePath = getFilePath(contentObject.fileName);
+  const optimizedVideoFilePath = getFilePath(videoFileName);
+  const thumbnailFilePath = getFilePath(thumbnailFileName);
+  await unlinkFile(originalVideoFilePath);
+  await unlinkFile(optimizedVideoFilePath);
+  await unlinkFile(thumbnailFilePath);
 };
 
 const processContent = async (contentObject, createdBy, createdAt) => {
