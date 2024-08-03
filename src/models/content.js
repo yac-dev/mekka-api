@@ -4,6 +4,10 @@ const contentSchema = mongoose.Schema({
   data: {
     type: String,
   },
+  thumbnail: {
+    type: String,
+    // videoの場合にあり、
+  },
   type: {
     type: String,
     enum: ['photo', 'video'], // launchedは、portでのchat用ね。
@@ -14,6 +18,7 @@ const contentSchema = mongoose.Schema({
   },
   duration: {
     type: Number,
+    // videoの場合にあり、
   },
   createdBy: {
     type: mongoose.Schema.ObjectId,
