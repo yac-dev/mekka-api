@@ -28,44 +28,6 @@ import Reaction from '../models/reaction.js';
 
 const unlinkFile = util.promisify(fs.unlink);
 
-// resolutionもinputにしようか。
-
-// videoを作って、videoのthumbnailも作る必要がある。
-// videoのthumbnailは、videoの1フレーム目を取ってくる。
-// ffmpegを使わなければいけない性質上、ここはmemoryよりもfileに書き出して、それをまた読み込んでっていう作業をせざるをえない。
-
-// ここもできれば、memory内で済ませたいができるんだろうか・・・？
-// これ、複数のvideo uploadとなると今は無理だわ。。。
-// 一つのvideo 処理するだけで手一杯ですわ。
-// 一つにしよう。そして、そのvideoのthumbnailも作る。
-// そして、そのvideoのthumbnailをawsにuploadする。
-// そして、そのvideoをawsにuploadする。
-// そして、そのvideoのthumbnailをawsにuploadする。
-
-// outputとして、最終的にvideoをthumbnailのfile pathを出す感じかな。
-const optimizeVideo = (originalFileName, newFileName) => {
-  const compressOptions = {
-    videoCodec: 'libx264', // 使用するビデオコーデック
-    audioCodec: 'aac', // 使用するオーディオコーデック
-    size: '990x540', // 出力動画の解像度
-  };
-  const __dirname = path.resolve();
-  const inputFilePath = path.join(__dirname, 'buffer', originalFileName);
-  const outputFilePath = path.join(__dirname, 'buffer', newFileName);
-  const thumbnailPath = path.join(__dirname, 'buffer', `${newFileName.split('.')[0]}_thumbnail.jpg`);
-  const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
-
-  return new Promise((resolve, reject) => {
-    exec(command, (err, stdout, stderr) => {
-      if (err) console.log('Error ', err);
-      else {
-        // ここでoriginalの動画を消して、optimizeされた動画をaws uploadのlogicに渡す感じだ。
-        resolve(outputFilePath);
-      }
-    });
-  });
-};
-
 export const experiment = async (request, response) => {
   try {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -120,10 +82,6 @@ export const experimentVideo = async (request, response) => {
     console.log(error);
   }
 };
-
-// video様にthubnailを作りたいが、、、ffmpeg
-// そもそもcreatePostってどういうのだっけ？
-// 色々なdocument作る部分あって、整理しないといかんよな。。。
 
 // notificationベットで分けた方がいいね。。。
 // let notificationTitle = '';
@@ -186,11 +144,15 @@ const optimizeImage = async (inputFileName, resolution) => {
   return processed;
 };
 
-const optimizeVideoNew = (fileObject) => {
-  const videoFileName = `${fileObject.originalname.split('.')[0]}-optimized.mp4`;
-  const thumbnailFileName = `${fileObject.originalname.split('.')[0]}_thumbnail.jpg`;
-  const videoPath = getFilePath(videoFileName);
+const optimizeVideoNew = (fileName) => {
+  const optimizedVideoFileName = `${fileName.split('.')[0]}-optimized.mp4`;
+  const thumbnailFileName = `${fileName.split('.')[0]}_thumbnail.webp`;
+  const originalVideoPath = getFilePath(fileName);
+  const optimizedVideoPath = getFilePath(optimizedVideoFileName);
   const thumbnailPath = getFilePath(thumbnailFileName);
+
+  // 元々使ってたやつ
+  // const command = `ffmpeg -i ${inputFilePath} -vcodec h264 -b:v:v 1500k -acodec mp3 ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
 
   // const command = `ffmpeg -i ${fileObject.path} -vcodec h264 -b:v:v 2000k -acodec mp3 ${outputFilePath}`;
   // const command = `ffmpeg -i ${fileObject.path} -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 64k ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
@@ -199,21 +161,20 @@ const optimizeVideoNew = (fileObject) => {
   // if statement使いたいけど、、動かん。。。
   // const command = `ffmpeg -i ${fileObject.path} -vf "scale='if(gte(iw,ih),960:540,540:960)':force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
 
-  const command = `ffmpeg -i ${fileObject.path} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${videoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+  const command = `ffmpeg -i ${originalVideoPath} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${optimizedVideoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
 
   return new Promise((resolve) => {
     exec(command, (err) => {
       if (err) console.log('Error ', err);
       else {
         resolve({
-          videoFileName,
+          optimizedVideoFileName,
           thumbnailFileName,
         });
       }
     });
   });
 };
-// videoを作って、その後thumbnailもsharpする
 
 const processImage = async (fileName, resolution) => {
   // 1 imageを圧縮、
@@ -224,56 +185,43 @@ const processImage = async (fileName, resolution) => {
   await removeFile(fileName);
 };
 
-export const processVideo = async (contentObject, thumbnailResolution) => {
+export const processVideo = async (originalFileName, thumbnailResolution) => {
   // 1 video圧縮 + thumbnail作成。
-  const { thumbnailFileName, videoFileName } = await optimizeVideoNew(contentObject);
-  const videoBinary = fs.createReadStream(getFilePath(videoFileName));
+  const { thumbnailFileName, optimizedVideoFileName } = await optimizeVideoNew(originalFileName);
+  const videoBinary = fs.createReadStream(getFilePath(optimizedVideoFileName));
   const thumbnailBinary = await optimizeImage(thumbnailFileName, thumbnailResolution);
   // 2 そのvideoとthumbnailをs3にuploadする。
-  await uploadContentToS3(contentObject.fileName, 'videos', videoBinary);
+  await uploadContentToS3(originalFileName, 'videos', videoBinary);
   await uploadContentToS3(thumbnailFileName, 'photos', thumbnailBinary);
 
   // 3 そのvideoとthumbnailをunlinkする。
-  await removeFile(contentObject.fileName);
-  await removeFile(videoFileName);
+  await removeFile(originalFileName);
+  await removeFile(optimizedVideoFileName);
   await removeFile(thumbnailFileName);
-
-  // const originalVideoFilePath = getFilePath(contentObject.fileName);
-  // const optimizedVideoFilePath = getFilePath(videoFileName);
-  // const thumbnailFilePath = getFilePath(thumbnailFileName);
-  // await unlinkFile(originalVideoFilePath);
-  // await unlinkFile(optimizedVideoFilePath);
-  // await unlinkFile(thumbnailFilePath);
 };
 
 // fileNameがごちゃごちゃしてない？？これももっと簡単にすべき。。。
 const processContent = async (contentObject) => {
-  // const fileNamePrefix = contentObject.fileName.split('.')[0];
-  // const fileExtension = contentObject.type === 'photo' ? 'webp' : 'mp4';
-  // const fileName = `${fileNamePrefix}.${fileExtension}`;
-
   const contentFolder = contentObject.type === 'photo' ? 'photos' : 'videos';
+  const thumbnailFileName = `${contentObject.fileName.split('.')[0]}_thumbnail.webp`;
 
   const content = await Content.create({
     data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${contentFolder}/${contentObject.fileName}`,
     type: contentObject.type,
     duration: contentObject.duration,
     createdBy: contentObject.userId,
+    thumbnail:
+      contentObject.type === 'video'
+        ? `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/photos/${thumbnailFileName}`
+        : null,
   });
 
   if (contentObject.type === 'photo') {
     await processImage(contentObject.fileName, { height: 1920, width: 1080 });
     return content;
-    // const sharpedImageBinary = await sharpImage(contentObject.fileName);
-    // await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
   } else if (contentObject.type === 'video') {
-    await processVideo(contentObject, { height: 500, width: 500 });
+    await processVideo(contentObject.fileName, { height: 1000, width: 1000 });
     return content;
-    // const outputFileName = `optimized-${contentObject.fileName}`;
-    // const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
-    // const fileStream = fs.createReadStream(optimizedVideoFilePath);
-    // await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-    // await unlinkFile(optimizedVideoFilePath);
   }
 };
 
@@ -319,7 +267,7 @@ export const createPost = async (request, response) => {
       createdBy,
     });
 
-    // // creation 3: 新しいtag documentを作る。
+    // creation 3: 新しいtag documentを作る。
     let tagObjects;
     if (createdTagObjects.length) {
       const newTags = await Tag.insertMany(
