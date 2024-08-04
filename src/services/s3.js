@@ -19,27 +19,6 @@ const s3 = new S3Client({
   },
 });
 
-export const uploadAsset = async (buffer, mimeType, contentType) => {
-  const assetName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
-
-  const keyPrefixMap = {
-    icon: 'icons',
-    photo: 'photos',
-    video: 'videos',
-  };
-
-  const Key = `${keyPrefixMap[contentType]}/${assetName()}`;
-
-  const params = {
-    Bucket: bucketName,
-    Key,
-    Body: buffer,
-    ContentType: mimeType,
-  };
-  const command = new PutObjectCommand(params);
-  await s3.send(command);
-};
-
 export const uploadPhoto = async (originalFileName, outputFileName, contentType, binaryData) => {
   const __dirname = path.resolve();
   const originalFilePath = path.join(__dirname, 'buffer', originalFileName);
@@ -72,7 +51,7 @@ export const uploadPhoto = async (originalFileName, outputFileName, contentType,
 export const uploadContentToS3 = async (outputFileName, type, binaryData) => {
   let Key = `${type}/${outputFileName}`;
   const uploadParams = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Bucket: bucketName,
     Body: binaryData,
     Key: Key,
   };

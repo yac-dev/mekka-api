@@ -1,128 +1,22 @@
-import Space from '../models/space.js';
 import Post from '../models/post.js';
 import Content from '../models/content.js';
-import ReactionStatus from '../models/reactionStatus.js';
 import Comment from '../models/comment.js';
 import Tag from '../models/tag.js';
 import Log from '../models/log.js';
-import LocationTag from '../models/locationTag.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
-import SpaceUpdateLog from '../models/spaceUpdateLog.js';
-import TagUpdateLog from '../models/tagUpdateLog.js';
-import { uploadPhoto, uploadVideo, uploadContentToS3 } from '../services/s3.js';
+import { uploadPhoto, uploadContentToS3 } from '../services/s3.js';
 import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs';
 import util from 'util';
-import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import { exec } from 'child_process';
-// const ffmpeg = require('fluent-ffmpeg');
-import ffmpeg from 'fluent-ffmpeg';
-import { Expo } from 'expo-server-sdk';
 import mongoose from 'mongoose';
-const expo = new Expo();
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
 
 const unlinkFile = util.promisify(fs.unlink);
-
-export const experiment = async (request, response) => {
-  try {
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    const bucketRegion = process.env.AWS_S3_BUCKET_REGION;
-    const bucketAccessKey = process.env.AWS_S3_BUCKET_ACCESS_KEY;
-    const bucketSecretKey = process.env.AWS_S3_BUCKET_SECRET_KEY;
-
-    const imageName = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
-
-    const s3 = new S3Client({
-      credentials: {
-        accessKeyId: bucketAccessKey,
-        secretAccessKey: bucketSecretKey,
-      },
-      region: bucketRegion,
-    });
-    const sharpedBuffer = await sharp(request.file.buffer)
-      .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
-      .resize({ height: 1920, width: 1080, fit: 'contain' })
-      .webp({ quality: 1 })
-      .toBuffer();
-    console.log(sharpedBuffer);
-
-    // const params = {
-    //   Bucket: bucketName,
-    //   Key: imageName(),
-    //   Body: sharpedBuffer,
-    //   ContentType: request.file.mimetype,
-    // };
-    // const command = new PutObjectCommand(params);
-    // await s3.send(command);
-
-    response.status(201).json({
-      message: 'success',
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-export const experimentVideo = async (request, response) => {
-  try {
-    console.log(request.body);
-    // const { videoFileName, thumbnailFileName } = await optimizeVideoNew(request.files[0]);
-    // console.log('optimized video -> ', videoFileName);
-    // console.log('optimized thumbnail -> ', thumbnailFileName);
-
-    response.status(201).json({
-      message: 'success',
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-// notificationベットで分けた方がいいね。。。
-// let notificationTitle = '';
-
-// const spaceAndUserRelationships = await SpaceAndUserRelationship.find({
-//   space: spaceId,
-//   user: { $ne: createdBy },
-// })
-//   .populate({ path: 'user' })
-//   .select({ pushToken: 1 });
-// const membersPushTokens = spaceAndUserRelationships.map((rel) => {
-//   return rel.user.pushToken;
-// });
-
-// const notificationData = {
-//   notificationType: 'Post',
-//   spaceId: spaceId,
-//   tagId: tagIds[0],
-// };
-
-// const chunks = expo.chunkPushNotifications(
-//   membersPushTokens.map((token) => ({
-//     to: token,
-//     sound: 'default',
-//     data: notificationData,
-//     title: 'Member has posted.',
-//     body: caption,
-//   }))
-// );
-
-// const tickets = [];
-
-// for (let chunk of chunks) {
-//   try {
-//     let receipts = await expo.sendPushNotificationsAsync(chunk);
-//     tickets.push(...receipts);
-//     console.log('Push notifications sent:', receipts);
-//   } catch (error) {
-//     console.error('Error sending push notification:', error);
-//   }
-// }
 
 const getFilePath = (fileName) => {
   return path.join(path.resolve(), 'buffer', fileName);
@@ -200,7 +94,6 @@ export const processVideo = async (originalFileName, thumbnailResolution) => {
   await removeFile(thumbnailFileName);
 };
 
-// fileNameがごちゃごちゃしてない？？これももっと簡単にすべき。。。
 const processContent = async (contentObject) => {
   const contentFolder = contentObject.type === 'photo' ? 'photos' : 'videos';
   const thumbnailFileName = `${contentObject.fileName.split('.')[0]}_thumbnail.webp`;
