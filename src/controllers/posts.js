@@ -265,8 +265,7 @@ export const createMoment = async (request, response) => {
       space: spaceId,
       type: 'moment',
       post: newMoment._id,
-      createdBy: createdBy,
-      createdAt: new Date(),
+      createdBy,
     });
 
     response.status(201).json({
