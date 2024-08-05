@@ -27,12 +27,12 @@ const removeFile = async (fileName) => {
   await unlinkFile(filePath);
 };
 
-const optimizeImage = async (inputFileName, resolution) => {
+const optimizeImage = async (inputFileName, resolution, fit = 'contain') => {
   const fileInput = getFilePath(inputFileName);
   // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
   const processed = await sharp(fileInput)
     .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
-    .resize({ height: resolution.height, width: resolution.width, fit: 'contain' })
+    .resize({ height: resolution.height, width: resolution.width, fit })
     .webp({ quality: 1 })
     .toBuffer();
   return processed;
@@ -83,7 +83,7 @@ export const processVideo = async (originalFileName, thumbnailResolution) => {
   // 1 video圧縮 + thumbnail作成。
   const { thumbnailFileName, optimizedVideoFileName } = await optimizeVideoNew(originalFileName);
   const videoBinary = fs.createReadStream(getFilePath(optimizedVideoFileName));
-  const thumbnailBinary = await optimizeImage(thumbnailFileName, thumbnailResolution);
+  const thumbnailBinary = await optimizeImage(thumbnailFileName, thumbnailResolution, 'cover');
   // 2 そのvideoとthumbnailをs3にuploadする。
   await uploadContentToS3(originalFileName, 'videos', videoBinary);
   await uploadContentToS3(thumbnailFileName, 'photos', thumbnailBinary);
@@ -160,6 +160,11 @@ export const createPost = async (request, response) => {
       createdBy,
     });
 
+    const newPost = await Post.populate(post, {
+      path: 'createdBy',
+      select: '_id name avatar',
+    });
+
     // creation 3: 新しいtag documentを作る。
     let tagObjects;
     if (createdTagObjects.length) {
@@ -199,14 +204,14 @@ export const createPost = async (request, response) => {
     response.status(201).json({
       data: {
         post: {
-          _id: post._id,
+          _id: newPost._id,
           contents: contentDocuments,
-          type: post.type,
-          caption: post.caption,
+          type: newPost.type,
+          caption: newPost.caption,
           space: spaceId,
-          createdBy: post.createdBy,
-          createdAt: post.createdAt,
-          disappearAt: post.disappearAt,
+          createdBy: newPost.createdBy,
+          createdAt: newPost.createdAt,
+          disappearAt: newPost.disappearAt,
           totalComments: 0,
           totalReactions: 0,
         },
@@ -222,89 +227,58 @@ export const createPost = async (request, response) => {
 
 export const createMoment = async (request, response) => {
   try {
-    const { caption, createdBy, spaceId, contents, type, disappearAfter } = request.body;
-    console.log('got moment post request');
-    const createdAt = new Date();
-    const disappearAt = new Date(createdAt.getTime() + Number(disappearAfter) * 60 * 1000);
-    const files = request.files;
-    const contentIds = [];
+    const {
+      caption, // stringのinput
+      createdBy, // stringのinput
+      spaceId, // stringのinput
+      contents: contentsJSON,
+      disappearAfter, // stringでinputくる
+    } = request.body;
 
-    const contentPromises = JSON.parse(contents).map(async (contentObject) => {
-      let fileName;
-      if (contentObject.type === 'photo') {
-        fileName = `${contentObject.fileName.split('.')[0]}.webp`;
-      } else if (contentObject.type === 'video') {
-        // --- ver1 ffmpeg通す時のやつ
-        // fileName = `optimized-${contentObject.fileName.split('.')[0]}.mp4`;
-        // -----
-        fileName = `${contentObject.fileName.split('.')[0]}.mp4`;
-      }
-      const content = await Content.create({
-        data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${
-          contentObject.type === 'photo' ? 'photos' : 'videos'
-        }/${fileName}`,
-        type: contentObject.type,
-        duration: contentObject.duration,
-        createdBy,
-        createdAt,
-      });
-      contentIds.push(content._id);
-      // // ここでsharpしてoutputする必要があって、そのoutputをawsにあげるっていう流れだよな。
-      // await uploadPhoto(content.fileName, content.type);
-      // return content;
-      // ここで場合わけをするか。photoかvideoか。
-      if (contentObject.type === 'photo') {
-        const sharpedImageBinary = await sharpImage(contentObject.fileName);
-        await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
-        return content;
-      } else if (contentObject.type === 'video') {
-        // --- ver1
-        // ffmpegを通して、
-        const outputFileName = `optimized-${contentObject.fileName}`;
-        const optimizedVideoFilePath = await optimizeVideo(contentObject.fileName, outputFileName);
-        const fileStream = fs.createReadStream(optimizedVideoFilePath);
-        // awsにuploadする。
-        await uploadPhoto(contentObject.fileName, fileName, content.type, fileStream);
-        await unlinkFile(optimizedVideoFilePath);
-        return content;
-        // ---
+    const contentObjects = JSON.parse(contentsJSON);
+    if (!contentObjects.length) {
+      throw new Error('Required to have at least one content.');
+    }
 
-        // ver2
-        // await uploadVideo(contentObject.fileName);
-        // return content;
-      }
-    });
-
+    // creation 1: content documentを作る。
+    const contentPromises = contentObjects.map((contentObject) => processContent(contentObject));
     const contentDocuments = await Promise.all(contentPromises);
-    const post = await Post.create({
-      contents: contentIds,
-      type,
+
+    // creation 2: post documentを作る。
+    const disappearAt = new Date(new Date().getTime() + Number(disappearAfter) * 60 * 1000);
+    const moment = await Post.create({
+      contents: contentDocuments.map((content) => content._id),
+      type: 'moment',
       caption,
       space: spaceId,
-      disappearAt: type === 'moment' ? disappearAt : null,
+      disappearAt: disappearAt,
       createdBy,
-      createdAt,
     });
 
-    const log = await Log.create({
+    const newMoment = await Post.populate(moment, {
+      path: 'createdBy',
+      select: '_id name avatar',
+    });
+
+    // creation 3: log documentを作る。
+    await Log.create({
       space: spaceId,
       type: 'moment',
-      post: post._id,
-      createdBy: createdBy,
-      createdAt: new Date(),
+      post: newMoment._id,
+      createdBy,
     });
 
     response.status(201).json({
       data: {
         post: {
-          _id: post._id,
+          _id: newMoment._id,
           contents: contentDocuments,
-          type: post.type,
-          caption: post.caption,
+          type: newMoment.type,
+          caption: newMoment.caption,
           space: spaceId,
-          createdBy: post.createdBy, // これのせいで、作った後avatarが表示されない。
-          createdAt: post.createdAt,
-          disappearAt: post.disappearAt,
+          createdBy: newMoment.createdBy,
+          createdAt: newMoment.createdAt,
+          disappearAt: newMoment.disappearAt,
           totalComments: 0,
           totalReactions: 0,
         },
