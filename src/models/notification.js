@@ -1,7 +1,13 @@
 import mongoose from 'mongoose';
 
 // どのspaceで誰がなんの通知objectを作ったか？
+// どのpostにcommentしたか、
+// どのpostにreactionをしたか
 const notificationSchema = mongoose.Schema({
+  post: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Post',
+  },
   space: {
     type: mongoose.Schema.ObjectId,
     ref: 'Space',
@@ -10,9 +16,9 @@ const notificationSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'Comment',
   },
-  post: {
+  reaction: {
     type: mongoose.Schema.ObjectId,
-    ref: 'Post',
+    ref: 'Reaction',
   },
   tag: {
     type: mongoose.Schema.ObjectId,
