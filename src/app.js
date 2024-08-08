@@ -19,6 +19,7 @@ import tagsRouter from './routers/tags.js';
 import iconsRouter from './routers/icons.js';
 import usersRouter from './routers/users.js';
 import postAndTagRelationshipsRouter from './routers/postAndTagRelationship.js';
+import notificationsRouter from './routers/notifications.js';
 import userAndReactionRelationshipsRouter from './routers/userAndReactionRelationships.js';
 import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships.js';
 import postAndReactionAndUserRelationshipsRouter from './routers/postAndReactionAndUserRelationships.js';
@@ -31,6 +32,7 @@ app.use(express.json());
 
 app.use('/buffer', express.static(path.join(__dirname, '..', 'buffer')));
 
+// NOTE: v1に直す。
 app.get('/', (request, response) => {
   response.send('Hello guest');
 });
@@ -49,6 +51,7 @@ app.use('/api/userandreactionrelationships', userAndReactionRelationshipsRouter)
 app.use('/api/spaceanduserrelationships', spaceAndUserRelationshipsRouter);
 app.use('/api/postandreactionanduserrelationships', postAndReactionAndUserRelationshipsRouter);
 app.use('/api/logs', logsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.use(handleErrors);
 
