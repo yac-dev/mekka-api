@@ -1,7 +1,7 @@
 import Notification from '../models/notification.js';
 import Space from '../models/space.js';
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
-import { sendNotification } from '../utils/notification.js';
+import { sendPushNotifications } from '../utils/pushNotification.js';
 
 export const createPostNotification = async (request, response) => {
   const { postId, spaceId, createdBy } = request.body;
@@ -37,7 +37,7 @@ export const createPostNotification = async (request, response) => {
     const notificationData = {};
     const notificationTitle = `${populatedNotification.createdBy.name} created a post`;
     const notificationBody = populatedNotification.post.caption;
-    await sendNotification(pushTokens, notificationData, notificationTitle, notificationBody);
+    await sendPushNotifications(pushTokens, notificationData, notificationTitle, notificationBody);
   }
 
   if (populatedNotification.space.isPublic) {

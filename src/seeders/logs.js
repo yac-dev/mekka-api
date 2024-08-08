@@ -17,9 +17,18 @@ export const seedLogs = async () => {
       ],
     });
     const tags = await Tag.find({});
+    // momentに関するlogは、シンプルにspaceごとに作ればいい。
     for (const relationship of spaceAndUserRelationships) {
       const spaceTags = tags.filter((tag) => tag.space.toString() === relationship.space._id.toString());
       const { space, lastCheckedIn, user } = relationship;
+      const oneDayLater = new Date(lastCheckedIn.getTime() + 24 * 60 * 60 * 1000);
+      await Log.create({
+        type: 'moment',
+        space: space._id,
+        createdBy: user._id,
+        createdAt: oneDayLater,
+      });
+      // まあ、本来ならpostも欲しいところだが、今はここは飛ばす。
       for (const tag of spaceTags) {
         // 30% chance to create a log after lastCheckedIn
         if (Math.random() < 0.5) {
