@@ -23,12 +23,14 @@ function aggregateLogsBySpaceAndTag(logs) {
       const spaceId = log.space.toString();
 
       if (!momentLogsBySpaceAndTag[spaceId]) {
-        momentLogsBySpaceAndTag[spaceId] = {};
+        momentLogsBySpaceAndTag[spaceId] = 1;
       }
 
       momentLogsBySpaceAndTag[spaceId]++;
     }
   });
+
+  console.log('moment logs', momentLogsBySpaceAndTag);
 
   return {
     logsBySpaceAndTag,
