@@ -591,7 +591,6 @@ export const updateSpaceCheckedInDate = async (request, response) => {
     spaceAndUserRelationship.lastCheckedIn = new Date();
     spaceAndUserRelationship.save();
 
-    console.log('now updated -> ', new Date());
     response.status(200).json({
       message: 'success', // 何も返す必要はないかな。
     });

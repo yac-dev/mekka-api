@@ -30,8 +30,6 @@ function aggregateLogsBySpaceAndTag(logs) {
     }
   });
 
-  console.log('moment logs', momentLogsBySpaceAndTag);
-
   return {
     logsBySpaceAndTag,
     momentLogsBySpaceAndTag,
