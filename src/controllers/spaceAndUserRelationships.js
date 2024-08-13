@@ -53,8 +53,6 @@ export const getMySpaces = async (request, response) => {
       return plainSpaceObject;
     });
 
-    console.log('my spaces -> ', newMySpaces);
-
     response.status(200).json({
       data: {
         mySpaces: newMySpaces,
@@ -76,7 +74,6 @@ export const updateSpaceLastCheckedIn = async (request, response) => {
     spaceAndUserRelationship.lastCheckedIn = new Date();
     spaceAndUserRelationship.save();
 
-    console.log('now updated -> ', new Date());
     response.status(200).json({
       message: 'success', // 何も返す必要はないかな。
     });

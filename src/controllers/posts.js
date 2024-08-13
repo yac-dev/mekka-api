@@ -55,7 +55,9 @@ const optimizeVideoNew = (fileName) => {
   // if statement使いたいけど、、動かん。。。
   // const command = `ffmpeg -i ${fileObject.path} -vf "scale='if(gte(iw,ih),960:540,540:960)':force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${outputFilePath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
 
-  const command = `ffmpeg -i ${originalVideoPath} -vf "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 23 -preset slower -c:a aac -b:a 128k -movflags +faststart ${optimizedVideoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+  // const command = `ffmpeg -i ${originalVideoPath} -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf 20 -preset slower -c:a aac -b:a 128k -movflags +faststart ${optimizedVideoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
+
+  const command = `ffmpeg -i ${originalVideoPath} ${optimizedVideoPath} -ss 00:00:01 -vframes 1 ${thumbnailPath}`;
 
   return new Promise((resolve) => {
     exec(command, (err) => {
@@ -358,12 +360,12 @@ export const getPostsByTagId = async (request, response) => {
               contents: relationship.post.contents,
               type: relationship.post.type,
               caption: relationship.post.caption,
-              locationTag: relationship.post.locationTag,
               createdAt: relationship.post.createdAt,
               createdBy: relationship.post.createdBy,
               disappearAt: relationship.post.disappearAt,
               totalComments,
               totalReactions,
+              location: relationship.post.location,
             };
           }
         })
@@ -388,85 +390,311 @@ export const getPostsByTagId = async (request, response) => {
 
 export const getPostsByTagIdAndRegion = async (request, response) => {
   try {
+    const { tagId } = request.params;
     const { region } = request.body;
     const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
     const minLat = latitude - latitudeDelta / 2;
     const maxLat = latitude + latitudeDelta / 2;
     const minLng = longitude - longitudeDelta / 2;
     const maxLng = longitude + longitudeDelta / 2;
-    const now = new Date(new Date().getTime());
+    const now = new Date();
 
     // console.log('min lat -> ', minLat);
     // console.log('max lat -> ', maxLat);
     // console.log('min lng -> ', minLng);
     // console.log('max lng -> ', maxLng);
 
-    const postAndTagRelationships = await PostAndTagRelationship.find({
-      tag: request.params.tagId,
-    });
-    // console.log('tag id -> ', request.params.tagId);
-    const postIds = postAndTagRelationships.map((rel) => rel.post);
-    // console.log(postIds);
-    const posts = await Post.find({
-      _id: { $in: postIds },
-      'location.coordinates': {
-        $geoWithin: {
-          $box: [
-            [minLng, minLat],
-            [maxLng, maxLat],
+    const posts = await PostAndTagRelationship.aggregate([
+      // Match documents with the given tag
+      { $match: { tag: new mongoose.Types.ObjectId(tagId) } },
+      // Lookup the associated post
+      {
+        $lookup: {
+          from: 'posts',
+          localField: 'post',
+          foreignField: '_id',
+          as: 'post',
+        },
+      },
+      // Unwind the post array
+      { $unwind: '$post' },
+      // Match posts within the specified region
+      {
+        $match: {
+          'post.location.coordinates': {
+            $geoWithin: {
+              $box: [
+                [minLng, minLat],
+                [maxLng, maxLat],
+              ],
+            },
+          },
+          $or: [
+            { 'post.type': 'normal' },
+            {
+              $and: [{ 'post.type': 'moment' }, { 'post.disappearAt': { $gt: now } }],
+            },
           ],
         },
       },
-      // disappearAt: {
-      //   $gt: now,
-      // },
-    }).populate([
+      // Lookup related data (contents and createdBy)
       {
-        path: 'contents',
-        model: 'Content',
+        $lookup: {
+          from: 'contents',
+          localField: 'post.contents',
+          foreignField: '_id',
+          as: 'post.contents',
+        },
       },
-      { path: 'createdBy', model: 'User', select: '_id name avatar' },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'post.createdBy',
+          foreignField: '_id',
+          as: 'post.createdBy',
+        },
+      },
+      // Unwind the createdBy array
+      { $unwind: '$post.createdBy' },
+      // Project only the necessary fields
+      {
+        $project: {
+          _id: '$post._id',
+          contents: '$post.contents',
+          type: '$post.type',
+          caption: '$post.caption',
+          createdAt: '$post.createdAt',
+          createdBy: {
+            _id: '$post.createdBy._id',
+            name: '$post.createdBy.name',
+            avatar: '$post.createdBy.avatar',
+          },
+          disappearAt: '$post.disappearAt',
+          location: '$post.location',
+        },
+      },
     ]);
 
-    const returning = posts
-      .map((post) => {
-        if (post.type === 'normal' || (post.type === 'moment' && post.disappearAt > now)) {
-          return post;
-        }
-      })
-      .filter((post) => post);
-    // 'location.coordinates': {
-    //   $geoWithin: {
-    //     $box: [
-    //       [minLng, minLat],
-    //       [maxLng, maxLat],
-    //     ],
-    //   },
-    // },
-    // console.log('fetched by map', posts);
+    console.log('posts are -> ', posts);
 
     response.status(200).json({
       data: {
-        posts: returning,
+        posts,
       },
     });
-    // const posts = postAndTagRelationships
-    //   .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
-    //   .map((relationship, index) => {
-    //     // console.log(relationship.post);
-    //     return {
-    //       _id: relationship.post._id,
-    //       contents: relationship.post.contents,
-    //       caption: relationship.post.caption,
-    //       locationTag: relationship.post.locationTag,
-    //       createdAt: relationship.post.createdAt,
-    //       createdBy: relationship.post.createdBy,
-    //     };
-    //   });
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    response.status(500).json({ error: 'An error occurred while fetching posts' });
   }
 };
+
+// export const getPostsByTagIdAndRegion = async (request, response) => {
+//   try {
+//     const { region } = request.body;
+//     const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
+//     const minLat = latitude - latitudeDelta / 2;
+//     const maxLat = latitude + latitudeDelta / 2;
+//     const minLng = longitude - longitudeDelta / 2;
+//     const maxLng = longitude + longitudeDelta / 2;
+//     const now = new Date(new Date().getTime());
+
+//     console.log('min lat -> ', minLat);
+//     console.log('max lat -> ', maxLat);
+//     console.log('min lng -> ', minLng);
+//     console.log('max lng -> ', maxLng);
+
+//     const postAndTagRelationships = await PostAndTagRelationship.find({
+//       tag: request.params.tagId,
+//     });
+//     // console.log('tag id -> ', request.params.tagId);
+//     const postIds = postAndTagRelationships.map((rel) => rel.post);
+//     // console.log(postIds);
+//     const posts = await Post.find({
+//       _id: { $in: postIds },
+//       'location.coordinates': {
+//         $geoWithin: {
+//           $box: [
+//             [minLng, minLat],
+//             [maxLng, maxLat],
+//           ],
+//         },
+//       },
+//       // disappearAt: {
+//       //   $gt: now,
+//       // },
+//     }).populate([
+//       {
+//         path: 'contents',
+//         model: 'Content',
+//       },
+//       { path: 'createdBy', model: 'User', select: '_id name avatar' },
+//     ]);
+
+//     const returning = posts
+//       .map((post) => {
+//         if (post.type === 'normal' || (post.type === 'moment' && post.disappearAt > now)) {
+//           return post;
+//         }
+//       })
+//       .filter((post) => post);
+//     // 'location.coordinates': {
+//     //   $geoWithin: {
+//     //     $box: [
+//     //       [minLng, minLat],
+//     //       [maxLng, maxLat],
+//     //     ],
+//     //   },
+//     // },
+//     // console.log('fetched by map', posts);
+
+//     response.status(200).json({
+//       data: {
+//         posts: returning,
+//       },
+//     });
+//     // const posts = postAndTagRelationships
+//     //   .filter((relationship) => relationship.post !== null && relationship.post.createdBY !== null)
+//     //   .map((relationship, index) => {
+//     //     // console.log(relationship.post);
+//     //     return {
+//     //       _id: relationship.post._id,
+//     //       contents: relationship.post.contents,
+//     //       caption: relationship.post.caption,
+//     //       locationTag: relationship.post.locationTag,
+//     //       createdAt: relationship.post.createdAt,
+//     //       createdBy: relationship.post.createdBy,
+//     //     };
+//     //   });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
+
+// export const getPostsByTagIdAndRegion = async (request, response) => {
+//   try {
+//     const { mapBounds } = request.body;
+//     const { tagId } = request.params;
+//     const now = new Date(new Date().getTime());
+
+//     let posts;
+//     const { neCoordinates, swCoordinates } = mapBounds;
+
+//     // Use the southwest and northeast coordinates to define the bounding box
+//     const [swLng, swLat] = swCoordinates;
+//     const [neLng, neLat] = neCoordinates;
+
+//     posts = await Post.find({
+//       'location.coordinates': {
+//         $geoWithin: {
+//           $box: [
+//             [swLng, swLat],
+//             [neLng, neLat],
+//           ],
+//         },
+//       },
+//     }).populate([
+//       { path: 'contents', model: 'Content' },
+//       { path: 'createdBy', model: 'User', select: '_id name avatar' },
+//     ]);
+//     const postAndTagRelationships = await PostAndTagRelationship.find({
+//       tag: tagId,
+//       post: { $in: posts.map((post) => post._id) },
+//     });
+//     posts = posts.filter((post) => postAndTagRelationships.some((rel) => rel.post.toString() === post._id.toString()));
+
+//     console.log('posts', posts);
+
+//     // if (!mapBounds) {
+//     //   // まず、最初のpostを見つける。
+//     //   // いやいや、これだとダメだわな。。。
+//     //   const firstPost = await Post.findOne({
+//     //     'location.coordinates': { $exists: true },
+//     //   }).populate([
+//     //     { path: 'contents', model: 'Content' },
+//     //     { path: 'createdBy', model: 'User', select: '_id name avatar' },
+//     //   ]);
+
+//     //   console.log('firstPost is this', JSON.stringify(firstPost, null, 2));
+
+//     //   if (!firstPost) {
+//     //     return response.status(404).json({ error: 'No posts with location found for this tag' });
+//     //   }
+
+//     //   // Define a range based on the first post's location
+//     //   const [longitude, latitude] = firstPost.location.coordinates;
+//     //   const latDelta = 9; // Roughly 1000km north-south
+//     //   const lngDelta = 9 / Math.cos((latitude * Math.PI) / 180); // Adjust for latitude
+
+//     //   const minLat = latitude - latDelta;
+//     //   const maxLat = latitude + latDelta;
+//     //   const minLng = longitude - lngDelta;
+//     //   const maxLng = longitude + lngDelta;
+
+//     //   // Fetch remaining posts within this range
+//     //   const remainingPosts = await Post.find({
+//     //     _id: { $ne: firstPost._id },
+//     //     'location.coordinates': {
+//     //       $geoWithin: {
+//     //         $box: [
+//     //           [minLng, minLat],
+//     //           [maxLng, maxLat],
+//     //         ],
+//     //       },
+//     //     },
+//     //   }).populate([
+//     //     { path: 'contents', model: 'Content' },
+//     //     { path: 'createdBy', model: 'User', select: '_id name avatar' },
+//     //   ]);
+//     //   posts = [firstPost, ...remainingPosts];
+//     //   //最後に、これらのpostのうち、incomingのtag Idが付与されているpostだけをfilterしたい。
+//     //   const postAndTagRelationships = await PostAndTagRelationship.find({
+//     //     tag: tagId,
+//     //     post: { $in: posts.map((post) => post._id) },
+//     //   });
+//     //   posts = posts.filter((post) =>
+//     //     postAndTagRelationships.some((rel) => rel.post.toString() === post._id.toString())
+//     //   );
+//     // } else {
+//     //   const { neCoordinates, swCoordinates } = mapBounds;
+
+//     //   // Use the southwest and northeast coordinates to define the bounding box
+//     //   const [swLng, swLat] = swCoordinates;
+//     //   const [neLng, neLat] = neCoordinates;
+
+//     //   posts = await Post.find({
+//     //     'location.coordinates': {
+//     //       $geoWithin: {
+//     //         $box: [
+//     //           [swLng, swLat],
+//     //           [neLng, neLat],
+//     //         ],
+//     //       },
+//     //     },
+//     //   }).populate([
+//     //     { path: 'contents', model: 'Content' },
+//     //     { path: 'createdBy', model: 'User', select: '_id name avatar' },
+//     //   ]);
+//     //   const postAndTagRelationships = await PostAndTagRelationship.find({
+//     //     tag: tagId,
+//     //     post: { $in: posts.map((post) => post._id) },
+//     //   });
+//     //   posts = posts.filter((post) =>
+//     //     postAndTagRelationships.some((rel) => rel.post.toString() === post._id.toString())
+//     //   );
+//     // }
+
+//     const returning = posts.filter((post) => post.createdBy !== null);
+//     // console.log('returning', returning);
+
+//     response.status(200).json({
+//       data: {
+//         posts: returning,
+//       },
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
 
 export const getPostsByUserId = async (request, response) => {
   try {
