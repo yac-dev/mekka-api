@@ -4,7 +4,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import { AppError } from '../utils/AppError.js';
+import { MembershipStatus } from '../models/membershipStatus.js';
 // import mailgun from 'mailgun-js'
+// signupで、membershipもつくりたいな。。。
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -29,11 +31,17 @@ export const signup = async (request, response, next) => {
       throw new Error('The user with this email already exists.');
     }
     const randomAvatarNumber = Math.floor(Math.random() * 24) + 1;
+
+    const membershipStatus = await MembershipStatus.create({
+      status: 'normal',
+    });
+
     const user = new User({
       name,
       email,
       avatar: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/avatars/default-avatar-${randomAvatarNumber}.png`,
       password,
+      membershipStatus: membershipStatus._id,
       pushToken: '',
     });
 
