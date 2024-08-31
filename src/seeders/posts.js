@@ -27,6 +27,9 @@ const locations = [
   { type: 'Point', coordinates: [17.17, 50.94] },
   { type: 'Point', coordinates: [1.06, 42.6] },
   { type: 'Point', coordinates: [-1.35, 51.18] },
+  { type: 'Point', coordinates: [31.23573, 30.0444] },
+  { type: 'Point', coordinates: [7.9898, 31.2357] },
+  { type: 'Point', coordinates: [10.181667, 36.806389] },
 ];
 
 const post = [
