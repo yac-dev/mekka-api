@@ -26,8 +26,17 @@ export const authorization = async (request, response, next) => {
     pushToken: true,
     avatar: true,
   });
+
+  // jwtでのuserなかったと言うことで、エラーではないからな。。。これでresponse返せばいい。
   if (!user) {
-    return next(new AppError('The user with this token does no longer exist.', 401));
+    response.status(200).json({
+      status: 'success',
+      data: {
+        user: null,
+      },
+    });
+    return;
+    // return next(new AppError('The user with this token does no longer exist.', 401));
   }
   request.user = user;
   next();
