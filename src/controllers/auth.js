@@ -75,19 +75,26 @@ export const signup = async (request, response, next) => {
 
 export const loadMe = async (request, response) => {
   const { user } = request;
-  response.status(200).json({
-    status: 'success',
-    data: {
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        pushToken: user.pushToken,
-        createdAt: user.createdAt,
+  try {
+    response.status(200).json({
+      status: 'success',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          pushToken: user.pushToken,
+          createdAt: user.createdAt,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    response.status(500).json({
+      status: 'error',
+      message: error.message,
+    });
+  }
 };
 
 export const login = async (request, response, next) => {
