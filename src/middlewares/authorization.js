@@ -26,8 +26,15 @@ export const authorization = async (request, response, next) => {
     pushToken: true,
     avatar: true,
   });
+
   if (!user) {
-    return next(new AppError('The user with this token does no longer exist.', 401));
+    response.status(200).json({
+      status: 'success',
+      data: {
+        user: null,
+      },
+    });
+    return;
   }
   request.user = user;
   next();
