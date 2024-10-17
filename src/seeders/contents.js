@@ -7,7 +7,7 @@ const generateContents = () => {
   contentTypes.forEach((contentType) => {
     for (let i = 1; i <= 12; i++) {
       contents.push({
-        data: `https://mekka-dev.s3.us-east-2.amazonaws.com/photos/${contentType}_${i}.jpg`, // s3のlink
+        data: `https://d162s8tpq944ba.cloudfront.net/photos/${contentType}_${i}.jpg`, // s3のlink
         type: 'photo',
         duration: null,
       });
@@ -22,7 +22,7 @@ const generateMomentContents = () => {
 
   for (let i = 1; i <= 15; i++) {
     contents.push({
-      data: `https://mekka-dev.s3.us-east-2.amazonaws.com/photos/moment_${i}.jpg`, // s3のlink
+      data: `https://d162s8tpq944ba.cloudfront.net/photos/moment_${i}.jpg`, // s3のlink
       type: 'photo',
       duration: null,
     });

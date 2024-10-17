@@ -1,14 +1,32 @@
-version: '3.7'
+# version: '3.7'
+# services:
+#   app:
+#     image: node:20.11.1
+#     working_dir: /usr
+#     tty: true
+#     ports:
+#       - '3000:3000'
+#     volumes:
+#       - ./:/usr
+#     command: >
+#       bash -c "npm install &&
+#       npm install nodemon -g &&
+#       env-cmd -f ./config/.env.dev nodemon --es-module-specifier-resolution=node src/index.js
+
+# dockerfileでworkdir書くよりも、docker-composeでworkdir書くほうがわかりやすいのかもな。。。
 services:
-  app:
-    image: node:20.11.1
-    working_dir: /usr
+  dev:
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev # dev用のdockerfile使うようにするか。
+
+    container_name: mekka_api_dev
+
     tty: true
+
     ports:
-      - '3000:3000'
+      - '3500:3500'
+
     volumes:
-      - ./:/usr
-    command: >
-      bash -c "npm install &&
-      npm install nodemon -g &&
-      env-cmd -f ./config/.env.dev nodemon --es-module-specifier-resolution=node src/index.js
+      - /app/node_modules
+      - ./:/app
