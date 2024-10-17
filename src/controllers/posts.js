@@ -71,6 +71,7 @@ const optimizeVideoNew = (fileName) => {
     });
   });
 };
+// あとは、いままで保存された写真なりビデオのurlを変えないといかんのよね。こういう場合ってどうするんだろう。
 
 const processImage = async (fileName, resolution) => {
   // 1 imageを圧縮、
@@ -101,14 +102,12 @@ const processContent = async (contentObject) => {
   const thumbnailFileName = `${contentObject.fileName.split('.')[0]}_thumbnail.webp`;
 
   const content = await Content.create({
-    data: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/${contentFolder}/${contentObject.fileName}`,
+    data: `${process.env.CLOUDFRONT_URL}${contentFolder}/${contentObject.fileName}`,
     type: contentObject.type,
     duration: contentObject.duration,
     createdBy: contentObject.userId,
     thumbnail:
-      contentObject.type === 'video'
-        ? `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/photos/${thumbnailFileName}`
-        : null,
+      contentObject.type === 'video' ? `${process.env.CLOUDFRONT_URL}${contentFolder}/${thumbnailFileName}` : null,
   });
 
   if (contentObject.type === 'photo') {

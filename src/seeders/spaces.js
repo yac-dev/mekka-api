@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 const spaces = [
   {
     name: 'Bros',
-    icon: 'https://mekka-dev.s3.us-east-2.amazonaws.com/icons/default_space_1.jpg', // s3のlink
+    icon: 'https://d162s8tpq944ba.cloudfront.net/icons/default_space_1.jpg', // s3のlink
     secretKey: '123456789012',
     contentType: 'photoAndVideo',
     description: 'This is the space 1',
@@ -20,7 +20,7 @@ const spaces = [
   },
   {
     name: "John Smith's",
-    icon: 'https://mekka-dev.s3.us-east-2.amazonaws.com/icons/default_space_2.jpg', // s3のlink
+    icon: 'https://d162s8tpq944ba.cloudfront.net/icons/default_space_2.jpg', // s3のlink
     secretKey: '234567890123',
     contentType: 'photo',
     description: 'This is the space 2',
@@ -31,7 +31,7 @@ const spaces = [
   },
   {
     name: 'Dog Lovers',
-    icon: 'https://mekka-dev.s3.us-east-2.amazonaws.com/icons/default_space_3.jpg', // s3のlink
+    icon: 'https://d162s8tpq944ba.cloudfront.net/icons/default_space_3.jpg', // s3のlink
     secretKey: '3456789012345',
     contentType: 'video',
     description: 'This is the space 3',

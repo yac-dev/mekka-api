@@ -1,0 +1,12 @@
+# シンプルに、これはdocker imageのせっけいずであることを忘れないことね。
+FROM node:20.11.1
+
+RUN apt-get update && apt-get install ffmpeg -y
+
+WORKDIR /app
+
+COPY ./ ./
+
+RUN npm install
+
+CMD [ "npm", "run", "server:dev" ]
