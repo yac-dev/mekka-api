@@ -9,66 +9,80 @@ const tags = [
   {
     icon: '65bbaa7637c9fbbd20c15363',
     name: 'general',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '6644b3bdfb287a658fac054a',
     name: 'Winter vacation',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '6644b368fb287a658fac0548',
     name: 'Pizza time!',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '6644b396fb287a658fac0549',
     name: 'BBQ',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '66aa31cf529627a835f883ad',
     name: 'Josh growth record',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '66aa3067529627a835f883a9',
     name: 'Our sports time!',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '66aa3069529627a835f883aa',
     name: 'Venice vacation',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '66aa31f6529627a835f883ae',
     name: 'Trip',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
   {
     icon: '6644b3e2fb287a658fac054b',
     name: 'Birthdays',
-    color: 'white',
+    color: '',
     space: null,
     createdBy: null,
   },
+];
+
+const colorOptios = [
+  'red1',
+  'yellow1',
+  'orange1',
+  'blue1',
+  'violet1',
+  'lightGreen1',
+  'green1',
+  'lightBlue1',
+  'pink1',
+  'black1',
+  'brown1',
 ];
 
 // iconのidをどうするかだね。。。hashでいいかね。これごとにiconを持つのも面倒だしな。。。
@@ -89,6 +103,7 @@ export const seedTags = async () => {
           icon: new mongoose.Types.ObjectId(tag.icon),
           space: space._id,
           createdBy: space.createdBy,
+          color: colorOptios[Math.floor(Math.random() * colorOptios.length)],
         });
         await newTag.save();
       }

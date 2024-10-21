@@ -72,6 +72,7 @@ export const updateSpaceLastCheckedIn = async (request, response) => {
     });
 
     spaceAndUserRelationship.lastCheckedIn = new Date();
+    console.log('working??');
     spaceAndUserRelationship.save();
 
     response.status(200).json({

@@ -8,6 +8,7 @@ import LocationTag from '../models/locationTag.js';
 import mongoose from 'mongoose';
 import TagUpdateLog from '../models/tagUpdateLog.js';
 import Icon from '../models/icon.js';
+import { colorOptios } from '../utils/colorOptions.js';
 
 // space, reactions, spaceAndUserRel, tagを作る。ここのhandlerで。
 function generateRandomString(length) {
@@ -158,7 +159,7 @@ export const createSpace = async (request, response) => {
       iconType: 'icon',
       icon: hashTagIcon._id,
       name: 'general',
-      color: 'white',
+      color: colorOptios[Math.floor(Math.random() * colorOptios.length)],
       count: 1,
       space: space._id,
       createdBy: userData._id,

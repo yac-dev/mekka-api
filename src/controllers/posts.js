@@ -15,6 +15,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
+import { colorOptios } from '../utils/colorOptions.js';
 
 const unlinkFile = util.promisify(fs.unlink);
 
@@ -171,10 +172,11 @@ export const createPost = async (request, response) => {
     if (createdTagObjects.length) {
       const newTags = await Tag.insertMany(
         createdTagObjects.map((tagObject) => {
+          const color = colorOptios[Math.floor(Math.random() * colorOptios.length)];
           return {
             iconType: tagObject.iconType,
             icon: tagObject.icon._id,
-            color: tagObject.color,
+            color,
             image: tagObject.image,
             name: tagObject.name,
             space: spaceId,
