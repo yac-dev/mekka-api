@@ -107,8 +107,7 @@ const processContent = async (contentObject) => {
     type: contentObject.type,
     duration: contentObject.duration,
     createdBy: contentObject.userId,
-    thumbnail:
-      contentObject.type === 'video' ? `${process.env.CLOUDFRONT_URL}${contentFolder}/${thumbnailFileName}` : null,
+    thumbnail: contentObject.type === 'video' ? `${process.env.CLOUDFRONT_URL}photos/${thumbnailFileName}` : null,
   });
 
   if (contentObject.type === 'photo') {
@@ -320,7 +319,7 @@ export const getPostsByTagId = async (request, response) => {
     const now = new Date(new Date().getTime());
     const page = Number(request.query.page);
     let hasNextPage = true;
-    const limitPerPage = 100;
+    const limitPerPage = 30;
     const sortingCondition = { _id: -1 };
     const postAndTagRelationships = await PostAndTagRelationship.find({
       tag: request.params.tagId,
