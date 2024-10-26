@@ -1,0 +1,59 @@
+#基本は、stagingとproductionはmachineのspec抜きに同じにしたいからね。
+name: Deploy Staging App
+
+on:
+  push:
+    branches:
+      - staging
+
+# 開発環境脳しかないからここら辺のbuild脳がなかったけどこうやって環境変数を読み込むのではなく、まさに作る感じだよね。
+# buildしてdeployするっていう流れが基本見たいね。
+jobs:
+  # jobの名前必須な。
+  build:
+    environment: mekka_staging
+    runs-on: ubuntu-latest
+    # stepsで一つ一つのactionを書いていく感じだ。
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+      - name: Create .env File
+        # ここでめっちゃ環境変数作ることになるね。
+        # ただ、環境変数名入れるfileの名前はこれどうすべきかね俺のものだと。
+        run: |
+          echo "AWS_S3_BUCKET_ACCESS_KEY=${{ secrets.AWS_S3_BUCKET_ACCESS_KEY }}" >> .env
+          echo "AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }}" >> .env
+          echo "AWS_S3_BUCKET_REGION=${{ secrets.AWS_S3_BUCKET_REGION }}" >> .env
+          echo "AWS_S3_BUCKET_SECRET_KEY=${{ secrets.AWS_S3_BUCKET_SECRET_KEY }}" >> .env
+          echo "CLOUDFRONT_URL=${{ secrets.CLOUDFRONT_URL }}" >> .env
+          echo "JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }}" >> .env
+          echo "MONGODB_URL=${{ secrets.MONGODB_URL }}" >> .env
+          echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+          echo "NODEMAILER_PASSWORD=${{ secrets.NODEMAILER_PASSWORD }}" >> .env
+          echo "NODEMAILER_USER=${{ secrets.NODEMAILER_USER }}" >> .env
+          echo "PORT=${{ secrets.PORT }}" >> .env
+          echo "REMOVEBG_API_KEY=${{ secrets.REMOVEBG_API_KEY }}" >> .env
+
+      - name: Login to DockerHub
+        #  ってことは、事前にdocker hubにimageをあげておく必要があるのかね。。。？ -> NOTE:そう。
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build Docker Image
+        # ここtaggingしているんだね。
+        run: docker run -t yosukedev/mekka_staging .
+      - name: Publish Image to DockerHub
+        run: docker push yosukedev/mekka_staging:latest
+        # そっか、この環境変数を読み込んだ上でbuildするわけだし、別にいいのか。別にserve先のmachineになくても。なるほどね！！！
+        # いやでもさ、こちのマシーンに環境変数あるの意味なくない？？上のghのubuntuに作っても意味ないよな。。。
+
+  deploy:
+    needs: build # buildが終わってからdeployしたいわけよ。
+    runs-on: self-hosted # これ初めて見たな。。。でもまあgithubのところで動かすわけではないからか。。。まいっか。
+    # ここでもう、awsのinstanceにアクセスして、すでにいる前提らしい。素晴らしいねこれ。
+    steps:
+      # 結局、build段階のものにアクセスするために、buildでpushしていたんだね。
+      - name: Pull Image from DockerHub
+        run: docker pull yosukedev/mekka_staging:latest
+      - name: Delete Old Container
+        run: docker rm -f mekka_staging_container
+      - name: Run Docker Container
+        run: docker run -d -p 3500:3500 --name mekka_staging_container yosukedev/mekka_staging
