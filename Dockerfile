@@ -1,4 +1,8 @@
-FROM node:16.16.0
+# stagingとproductionで同じ dockerfileを使う。。
+# いや、というか普通に全部同じDockerFile使えばよくない？w全部同じ環境にできるのがDockerの最大の強みでしょw
+# frontとかだと、nginx絡むからdevだけ分けてもいんだろうけど、少なくともserver側は全部同じでいい気がするねもう。
+
+FROM node:20.11.1
 
 RUN apt-get update && apt-get install ffmpeg -y
 
@@ -6,14 +10,10 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Install app dependencies
 RUN npm install
 
-# Copy the rest of the application code
 COPY . .
 
-# Expose the port your Express app listens on (change it if necessary)
 EXPOSE 3500
 
-# Start the Express app
 CMD [ "npm", "run", "server:production" ]
