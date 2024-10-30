@@ -6,6 +6,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { removeBackground } from '@imgly/background-removal-node';
 import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -118,5 +119,43 @@ export const createSticker = async (request, response) => {
     });
   } catch (error) {
     console.log(error);
+  }
+};
+
+// sticker create時はsharpしたいね。実装複雑になるけど。
+export const createStickerAndPreview = async (request, response) => {
+  // multerで受け取ったファイルをバッファに保存する。
+  const imagePath = path.join(path.resolve(), 'buffer', request.file.filename);
+  let config = {
+    output: {
+      format: 'image/webp',
+      quality: 0.8, // The quality. (Default: 0.8)
+      type: 'foreground',
+    },
+  };
+
+  try {
+    const blob = await removeBackground(imagePath, config);
+    const buffer = Buffer.from(await blob.arrayBuffer());
+
+    // // Define the output path for the new image
+    // const outputFilePath = path.join(path.resolve(), 'buffer', `processed-${request.file.filename}`);
+
+    // // Write the buffer to a file
+    // fs.writeFileSync(outputFilePath, buffer);
+    const base64Image = buffer.toString('base64');
+    unlinkFile(imagePath);
+    // clientにbase64 dataだけを返す。
+
+    response.status(200).json({
+      data: {
+        image: `data:image/webp;base64,${base64Image}`,
+      },
+    });
+  } catch (error) {
+    console.error('Error during background removal:', error);
+    response.status(500).json({
+      message: 'Failed to process image',
+    });
   }
 };
