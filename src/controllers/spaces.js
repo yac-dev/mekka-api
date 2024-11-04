@@ -529,6 +529,7 @@ export const joinPublicSpace = async (request, response) => {
       createdAt: new Date(),
       lastCheckedIn: new Date(),
     });
+    // ここもalready joinedをつけないといかん。
 
     const space = await Space.findById(spaceId).populate([
       {
@@ -595,6 +596,30 @@ export const updateSpaceCheckedInDate = async (request, response) => {
     response.status(200).json({
       message: 'success', // 何も返す必要はないかな。
     });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getSpaceBySecretKey = async (request, response) => {
+  try {
+    const { secretKey } = request.params;
+    const space = await Space.findOne({ secretKey }).populate([
+      {
+        path: 'createdBy',
+        model: 'User',
+      },
+    ]);
+    console.log('got space!!', space);
+    if (!space) {
+      throw new Error('Space not found.');
+    } else {
+      response.status(200).json({
+        data: {
+          space,
+        },
+      });
+    }
   } catch (error) {
     console.log(error);
   }
