@@ -175,7 +175,7 @@ export const createPost = async (request, response) => {
           return {
             iconType: tagObject.iconType,
             icon: tagObject.icon._id,
-            color,
+            color: tagObject.color,
             image: tagObject.image,
             name: tagObject.name,
             space: spaceId,
