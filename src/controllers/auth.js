@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import { AppError } from '../utils/AppError.js';
 import { MembershipStatus } from '../models/membershipStatus.js';
+import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 // import mailgun from 'mailgun-js'
 // signupで、membershipもつくりたいな。。。
 
@@ -21,7 +22,7 @@ const transporter = nodemailer.createTransport({
 
 export const signup = async (request, response, next) => {
   try {
-    const { name, email, password } = request.body;
+    const { name, email, password, spaceId } = request.body;
 
     if (password.length < 10) {
       throw new Error('Password has to be at least 10 characters long.');
@@ -50,6 +51,15 @@ export const signup = async (request, response, next) => {
     await user.save();
 
     const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
+
+    if (spaceId) {
+      await SpaceAndUserRelationship.create({
+        user: user._id,
+        space: spaceId,
+        createdAt: new Date(),
+        lastCheckedIn: new Date(),
+      });
+    }
 
     response.status(201).json({
       status: 'success',
