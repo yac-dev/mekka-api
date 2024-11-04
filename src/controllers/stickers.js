@@ -29,7 +29,9 @@ export const getStickers = async (request, response) => {
   try {
     const stickers = await Sticker.find({ isPublic: true });
     response.status(200).json({
-      stickers,
+      data: {
+        stickers,
+      },
     });
   } catch (error) {
     console.log(error);
