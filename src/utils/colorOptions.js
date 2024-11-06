@@ -8,6 +8,5 @@ export const colorOptios = [
   'green1',
   'lightBlue1',
   'pink1',
-  'black1',
   'brown1',
 ];
