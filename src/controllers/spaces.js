@@ -34,6 +34,7 @@ export const createSpace = async (request, response) => {
       isPublic,
       isCommentAvailable,
       isReactionAvailable,
+      isFollowAvailable,
       reactions,
       createdBy,
     } = request.body;
@@ -42,6 +43,7 @@ export const createSpace = async (request, response) => {
     const isPublicValue = JSON.parse(isPublic);
     const isCommentAvailableValue = JSON.parse(isCommentAvailable);
     const isReactionAvailableValue = JSON.parse(isReactionAvailable);
+    const isFollowAvailableValue = JSON.parse(isFollowAvailable);
     console.log(userData);
 
     // --------------
@@ -56,6 +58,7 @@ export const createSpace = async (request, response) => {
       isPublic: isPublicValue,
       isCommentAvailable: isCommentAvailableValue,
       isReactionAvailable: isReactionAvailableValue,
+      isFollowAvailable: isFollowAvailableValue,
       createdBy: new mongoose.Types.ObjectId(userData._id),
       totalPosts: 0,
       totalMembers: 1,
