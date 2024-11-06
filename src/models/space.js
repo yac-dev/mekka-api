@@ -30,6 +30,10 @@ const spaceSchema = mongoose.Schema({
     required: true,
     type: Boolean,
   },
+  isFollowAvailable: {
+    required: true,
+    type: Boolean,
+  },
   reactions: [
     {
       type: mongoose.Schema.ObjectId,
