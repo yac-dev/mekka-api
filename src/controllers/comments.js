@@ -92,10 +92,12 @@ export const createComment = async (request, response) => {
 export const getComments = async (request, response) => {
   try {
     const { postId } = request.params;
+    console.log('postId', postId);
     const comments = await Comment.find({ post: postId, createdBy: { $ne: null } }).populate([
       { path: 'createdBy', model: 'User' },
-      { path: 'reply', model: 'Comment' },
+      // { path: 'reply', model: 'Comment' },
     ]);
+    console.log('comments', comments);
     response.status(200).json({
       data: {
         comments,
