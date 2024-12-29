@@ -350,11 +350,11 @@ export const getPostsByTagId = async (request, response) => {
         .filter((relationship) => relationship.post !== null && relationship.post.createdBy !== null)
         .map(async (relationship) => {
           if (relationship.post.type === 'normal') {
-            const totalComments = await Comment.countDocuments({ post: relationship.post._id });
-            // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
-            const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
-              post: relationship.post._id,
-            });
+            // const totalComments = await Comment.countDocuments({ post: relationship.post._id });
+            // // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+            // const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
+            //   post: relationship.post._id,
+            // });
             // そっかここでやってんのか。。。totalCommentsとか。。。。totalのcomment, totaleReactions取っているから遅くなるんだよな。。。
             return {
               _id: relationship.post._id,
@@ -364,8 +364,8 @@ export const getPostsByTagId = async (request, response) => {
               createdAt: relationship.post.createdAt,
               createdBy: relationship.post.createdBy,
               disappearAt: relationship.post.disappearAt,
-              totalComments,
-              totalReactions,
+              // totalComments,
+              // totalReactions,
               location: relationship.post.location,
             };
           }
