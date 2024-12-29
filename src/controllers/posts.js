@@ -355,6 +355,7 @@ export const getPostsByTagId = async (request, response) => {
             const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
               post: relationship.post._id,
             });
+            // そっかここでやってんのか。。。totalCommentsとか。。。。totalのcomment, totaleReactions取っているから遅くなるんだよな。。。
             return {
               _id: relationship.post._id,
               contents: relationship.post.contents,
@@ -698,30 +699,71 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
 
 export const getPostsByUserId = async (request, response) => {
   try {
+    const page = Number(request.query.page);
+    let hasNextPage = true;
+    const limitPerPage = 30;
+    const sortingCondition = { _id: -1 };
     const documents = await Post.find({
       space: request.params.spaceId,
       // post: { $ne: null },  // これ意味ない。結局、mongoにはrdbmsにおけるjoin的な機能を持ち合わせていないから。
       createdBy: request.params.userId,
-    }).populate({
-      path: 'contents',
-      model: 'Content',
-    });
+    })
+      .sort(sortingCondition)
+      .skip(page * limitPerPage)
+      .limit(limitPerPage)
+      .populate([
+        {
+          path: 'contents',
+          model: 'Content',
+        },
+        { path: 'createdBy', model: 'User', select: '_id name avatar' },
+        { path: 'space', model: 'Space', select: 'reactions' },
+      ]);
 
     const posts = documents
       .filter((post) => post.createdBy !== null)
       .map((post, index) => {
-        return {
-          _id: post._id,
-          content: {
-            data: post.contents[0].data,
-            type: post.contents[0].type,
-          },
-          location: post.location,
-        };
+        if (post.type === 'normal') {
+          // const totalComments = await Comment.countDocuments({ post: relationship.post._id });
+          // // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+          // const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
+          //   post: relationship.post._id,
+          // });
+          // そっかここでやってんのか。。。totalCommentsとか。。。。totalのcomment, totaleReactions取っているから遅くなるんだよな。。。
+          return {
+            _id: post._id,
+            contents: post.contents,
+            type: post.type,
+            caption: post.caption,
+            createdAt: post.createdAt,
+            createdBy: post.createdBy,
+            disappearAt: post.disappearAt,
+            // totalComments,
+            // totalReactions,
+            location: post.location,
+          };
+        }
       });
 
+    const filteredPosts = posts.filter((post) => post);
+
+    if (!posts.length) hasNextPage = false;
     response.status(200).json({
-      posts,
+      data: {
+        posts: filteredPosts,
+        currentPage: page + 1,
+        hasNextPage,
+      },
+    });
+
+    console.log('posts response', posts);
+
+    response.status(200).json({
+      data: {
+        posts: filteredPosts,
+        currentPage: page + 1,
+        hasNextPage,
+      },
     });
   } catch (error) {
     console.log(error);
