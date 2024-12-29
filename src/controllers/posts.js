@@ -755,16 +755,6 @@ export const getPostsByUserId = async (request, response) => {
         hasNextPage,
       },
     });
-
-    console.log('posts response', posts);
-
-    response.status(200).json({
-      data: {
-        posts: filteredPosts,
-        currentPage: page + 1,
-        hasNextPage,
-      },
-    });
   } catch (error) {
     console.log(error);
   }
@@ -1026,5 +1016,68 @@ export const createReaction = async (request, response) => {
     response.status(500).json({
       error: error.message,
     });
+  }
+};
+
+export const getPostsByUserIdAndRegion = async (request, response) => {
+  try {
+    const { userId, spaceId } = request.params;
+    // const { region } = request.body;
+    // const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
+    // const minLat = latitude - latitudeDelta / 2;
+    // const maxLat = latitude + latitudeDelta / 2;
+    // const minLng = longitude - longitudeDelta / 2;
+    // const maxLng = longitude + longitudeDelta / 2;
+    // const now = new Date();
+
+    // console.log('min lat -> ', minLat);
+    // console.log('max lat -> ', maxLat);
+    // console.log('min lng -> ', minLng);
+    // console.log('max lng -> ', maxLng);
+
+    const documents = await Post.find({ createdBy: userId, space: spaceId, location: { $ne: null } }).populate([
+      {
+        path: 'contents',
+        model: 'Content',
+      },
+      { path: 'createdBy', model: 'User', select: '_id name avatar' },
+      { path: 'space', model: 'Space', select: 'reactions' },
+    ]);
+
+    const posts = documents
+      .filter((post) => post.createdBy !== null)
+      .map((post, index) => {
+        if (post.type === 'normal') {
+          // const totalComments = await Comment.countDocuments({ post: relationship.post._id });
+          // // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+          // const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
+          //   post: relationship.post._id,
+          // });
+          // そっかここでやってんのか。。。totalCommentsとか。。。。totalのcomment, totaleReactions取っているから遅くなるんだよな。。。
+          return {
+            _id: post._id,
+            contents: post.contents,
+            type: post.type,
+            caption: post.caption,
+            createdAt: post.createdAt,
+            createdBy: post.createdBy,
+            disappearAt: post.disappearAt,
+            // totalComments,
+            // totalReactions,
+            location: post.location,
+          };
+        }
+      });
+
+    const filteredPosts = posts.filter((post) => post);
+
+    response.status(200).json({
+      data: {
+        posts: filteredPosts,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ error: 'An error occurred while fetching posts' });
   }
 };
