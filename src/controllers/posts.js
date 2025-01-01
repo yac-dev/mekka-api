@@ -979,10 +979,12 @@ export const getReactionsByPostId = async (request, response) => {
           emoji: 1,
           sticker: '$stickerDetails',
           caption: 1,
-          count: { $ifNull: ['$count', 0] },
+          count: { $ifNull: ['$count', 1] },
         },
       },
     ]);
+
+    console.log('reactions', reactions);
 
     response.status(200).json({
       data: {
