@@ -12,9 +12,11 @@ export const createComment = async (request, response) => {
       createdAt: new Date(),
     });
 
-    const post = await Post.find({ _id: request.body.postId }).populate({
-      path: 'createdBy',
-    });
+    console.log('created comment', comment);
+
+    // const post = await Post.find({ _id: request.body.postId }).populate({
+    //   path: 'createdBy',
+    // });
 
     // ---
     let notificationTitle = '';
@@ -82,7 +84,9 @@ export const createComment = async (request, response) => {
     // }
 
     response.status(201).json({
-      comment,
+      data: {
+        comment,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -93,10 +97,14 @@ export const getComments = async (request, response) => {
   try {
     const { postId } = request.params;
     console.log('postId', postId);
-    const comments = await Comment.find({ post: postId, createdBy: { $ne: null } }).populate([
-      { path: 'createdBy', model: 'User' },
-      // { path: 'reply', model: 'Comment' },
-    ]);
+    const sortingCondition = { _id: -1 };
+
+    const comments = await Comment.find({ post: postId, createdBy: { $ne: null } })
+      .sort(sortingCondition)
+      .populate([
+        { path: 'createdBy', model: 'User' },
+        // { path: 'reply', model: 'Comment' },
+      ]);
     console.log('comments', comments);
     response.status(200).json({
       data: {
