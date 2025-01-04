@@ -979,10 +979,11 @@ export const getReactionsByPostId = async (request, response) => {
           emoji: 1,
           sticker: '$stickerDetails',
           caption: 1,
-          count: { $ifNull: ['$count', 1] },
+          count: { $ifNull: ['$count', 0] },
         },
       },
     ]);
+    // ここのaggregationがおかしいな、というかそもそもここの部分何にもわかってないからな。。。w gptに投げただけだし。。。
 
     console.log('reactions', reactions);
 
