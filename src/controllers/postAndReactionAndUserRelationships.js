@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 
 // このaggregation pipelineをうまく使えるようになりたいわな。。。
 // aggregationでは、
+// ok　落ち着け。ここでやりたいのはシンプルに、postIdを使ってまずreactionをとってくることね。
 export const getReactionsByPostId = async (request, response) => {
   try {
     // postのid使って、reactionのcountを取ってくきたいんだよな。。。

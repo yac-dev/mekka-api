@@ -364,6 +364,7 @@ export const getPostsByTagId = async (request, response) => {
               createdAt: relationship.post.createdAt,
               createdBy: relationship.post.createdBy,
               disappearAt: relationship.post.disappearAt,
+              // space: relationship.post.space,
               // totalComments,
               // totalReactions,
               location: relationship.post.location,
@@ -983,9 +984,6 @@ export const getReactionsByPostId = async (request, response) => {
         },
       },
     ]);
-    // ここのaggregationがおかしいな、というかそもそもここの部分何にもわかってないからな。。。w gptに投げただけだし。。。
-
-    console.log('reactions', reactions);
 
     response.status(200).json({
       data: {
