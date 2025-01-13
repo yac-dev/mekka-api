@@ -27,6 +27,20 @@ export const getUsersBySpaceId = async (request, response) => {
   }
 };
 
+export const getUserById = async (request, response) => {
+  try {
+    const { userId } = request.params;
+    const user = await User.findById(userId);
+    response.status(200).json({
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const getUsersByAddress = async (request, response) => {
   try {
     const users = await User.find();
