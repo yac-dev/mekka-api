@@ -116,6 +116,7 @@ export const login = async (request, response, next) => {
       // return next(new AppError("The user doesn't exist.", 400));
       throw new Error("The user doesn't exist.");
     }
+    console.log('user', user);
 
     const isEnteredPasswordCorrect = await user.isPasswordCorrect(password, user.password);
     if (!isEnteredPasswordCorrect) {

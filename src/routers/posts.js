@@ -13,6 +13,7 @@ import {
   getMomentPostsBySpaceId,
   getReactionsByPostId,
   createReaction,
+  getPostsByUserIdAndRegion,
 } from '../controllers/posts.js';
 import { multerParserInMemory } from '../middlewares/multerMemory.js';
 
@@ -29,5 +30,7 @@ router.route('/tag/:tagId/region').post(getPostsByTagIdAndRegion);
 router.route('/locationtag/:locationTagId/space/:spaceId').get(getPostsByLocationTagId);
 router.route('/user/:userId/space/:spaceId').get(getPostsByUserId);
 router.route('/space/:spaceId/moments').get(getMomentPostsBySpaceId);
+router.route('/user/:userId/space/:spaceId/region').get(getPostsByUserIdAndRegion);
 
+// routingがおかしい。
 export default router;
