@@ -17,6 +17,7 @@ const spaces = [
     isPublic: false,
     isCommentAvailable: true,
     isReactionAvailable: true,
+    isFollowAvailable: true,
   },
   {
     name: "John Smith's",
@@ -28,6 +29,7 @@ const spaces = [
     isPublic: false,
     isCommentAvailable: true,
     isReactionAvailable: true,
+    isFollowAvailable: true,
   },
   {
     name: 'Dog Lovers',
@@ -40,6 +42,7 @@ const spaces = [
     isPublic: true,
     isCommentAvailable: true,
     isReactionAvailable: true,
+    isFollowAvailable: true,
   },
 ];
 
