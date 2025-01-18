@@ -5,6 +5,7 @@ const expo = new Expo();
 
 export const createComment = async (request, response) => {
   try {
+    console.log('request.body -> ', request.body);
     const comment = await Comment.create({
       content: request.body.content,
       post: request.body.postId,
@@ -12,80 +13,55 @@ export const createComment = async (request, response) => {
       createdAt: new Date(),
     });
 
-    console.log('created comment', comment);
-
-    // const post = await Post.find({ _id: request.body.postId }).populate({
-    //   path: 'createdBy',
-    // });
-
-    // ---
-    let notificationTitle = '';
+    const post = await Post.findById(request.body.postId).populate({
+      path: 'createdBy',
+    });
 
     const notificationData = {
-      notificationType: 'Reaction',
+      type: 'comment',
+      postId: request.body.postId,
+      commentId: comment._id,
     };
-    // spaceの名前, idも必要だな。。。
-    // 誰々があなたの投稿にコメントしました。
-    // if (post.createdBy.pushToken) {
-    //   const chunks = expo.chunkPushNotifications({
-    //     to: post.createdBy.pushToken,
-    //     sound: 'default',
-    //     data: notificationData,
-    //     title: 'Reacted to your post.',
-    //   });
-    //   // emojiを含める感じか。。。
 
-    //   const tickets = [];
+    if (post.createdBy.pushToken) {
+      console.log('token', post.createdBy.pushToken);
+      if (!Expo.isExpoPushToken(post.createdBy.pushToken)) {
+        console.error(`expo-push-token is not a valid Expo push token`);
+      }
+      const notifyMessage = {
+        to: post.createdBy.pushToken,
+        sound: 'default',
+        data: notificationData,
+        title: `New Message from ${request.body.userName}`,
+        body: request.body.content,
+      };
+      const messages = [];
+      messages.push(notifyMessage);
+      const chunks = expo.chunkPushNotifications(messages);
 
-    //   for (let chunk of chunks) {
-    //     try {
-    //       let receipts = await expo.sendPushNotificationsAsync(chunk);
-    //       tickets.push(...receipts);
-    //       console.log('Push notifications sent:', receipts);
-    //     } catch (error) {
-    //       console.error('Error sending push notification:', error);
-    //     }
-    //   }
-    //   // これあれか、notificationのdocumentも作らないといけない感じか。。。
-    //   // commentとreactionの時にnotificationのdocumentを作って、
-    // }
-    // if (post.createdBy.pushToken) {
-    //   console.log('token', post.createdBy.pushToken);
-    //   if (!Expo.isExpoPushToken(post.createdBy.pushToken)) {
-    //     console.error(`expo-push-token is not a valid Expo push token`);
-    //   }
-    //   const notifyMessage = {
-    //     to: post.createdBy.pushToken,
-    //     sound: 'default',
-    //     data: notificationData,
-    //     title: 'Got comment',
-    //     body: 'Got comment',
-    //   };
-    //   const messages = [];
-    //   messages.push(notifyMessage);
-    //   const chunks = expo.chunkPushNotifications(messages);
+      const tickets = [];
 
-    //   const tickets = [];
-
-    //   try {
-    //     (async () => {
-    //       for (const chunk of chunks) {
-    //         try {
-    //           const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-    //           tickets.push(...ticketChunk);
-    //         } catch (error) {
-    //           console.error(error);
-    //         }
-    //       }
-    //     })();
-    //   } catch (error) {
-    //     console.error(error);
-    //   }
-    // }
+      try {
+        (async () => {
+          for (const chunk of chunks) {
+            try {
+              const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+              tickets.push(...ticketChunk);
+              console.log('Push notifications sent:', ticketChunk);
+            } catch (error) {
+              console.error(error);
+            }
+          }
+        })();
+      } catch (error) {
+        console.error(error);
+      }
+    }
 
     response.status(201).json({
       data: {
-        comment,
+        // comment,
+        comment: 'successs',
       },
     });
   } catch (error) {
