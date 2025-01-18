@@ -104,9 +104,9 @@ export const seedPosts = async () => {
       const location = locations[Math.floor(Math.random() * locations.length)];
       const now = new Date();
       // need one day later for now
-      const oneDayLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      // const oneDayLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       // momentは今よりも明日で
-      const randomDisappearAt = new Date(oneDayLater.getTime() + Math.random() * 24 * 60 * 60 * 1000);
+      const randomDisappearAt = new Date(now.getTime() + Math.random() * 24 * 60 * 60 * 1000);
 
       const newPost = new Post({
         ...post,
@@ -119,7 +119,6 @@ export const seedPosts = async () => {
         createdAt: now,
         location,
         disappearAt: randomDisappearAt,
-        createdAt: oneDayLater,
       });
       await newPost.save();
       // }
