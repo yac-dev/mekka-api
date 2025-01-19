@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 const tags = [
   {
     icon: '65bbaa7637c9fbbd20c15363',
-    name: 'general',
+    name: 'All',
     color: '',
     space: null,
     createdBy: null,
