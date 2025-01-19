@@ -60,8 +60,7 @@ export const createComment = async (request, response) => {
 
     response.status(201).json({
       data: {
-        // comment,
-        comment: 'successs',
+        comment,
       },
     });
   } catch (error) {
