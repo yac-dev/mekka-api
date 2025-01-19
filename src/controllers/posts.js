@@ -30,11 +30,12 @@ const removeFile = async (fileName) => {
 
 const optimizeImage = async (inputFileName, resolution, fit = 'contain') => {
   const fileInput = getFilePath(inputFileName);
-  // sharp(fileInput).resize(null, 300).webp({ quality: 80 }).toFile(outputPath);
   const processed = await sharp(fileInput)
-    .rotate() // exif dataを失う前に画像をrotateしておくといいらしい。こうしないと、画像が横向きになりやがる。。。
+    .rotate()
     .resize({ height: resolution.height, width: resolution.width, fit })
+    .withMetadata()
     .webp({ quality: 1 })
+
     .toBuffer();
   return processed;
 };
