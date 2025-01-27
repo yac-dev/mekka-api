@@ -17,6 +17,8 @@ import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
 import { colorOptios } from '../utils/colorOptions.js';
+import { Expo } from 'expo-server-sdk';
+const expo = new Expo();
 
 const unlinkFile = util.promisify(fs.unlink);
 
