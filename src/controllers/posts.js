@@ -4,6 +4,7 @@ import Comment from '../models/comment.js';
 import Tag from '../models/tag.js';
 import Log from '../models/log.js';
 import PostAndTagRelationship from '../models/postAndTagRelationship.js';
+import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import { uploadPhoto, uploadContentToS3 } from '../services/s3.js';
 import path from 'path';
 import sharp from 'sharp';
@@ -16,6 +17,8 @@ import crypto from 'crypto';
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
 import { colorOptios } from '../utils/colorOptions.js';
+import { Expo } from 'expo-server-sdk';
+const expo = new Expo();
 
 const unlinkFile = util.promisify(fs.unlink);
 
@@ -203,6 +206,36 @@ export const createPost = async (request, response) => {
       tag: tagIds[0],
       createdBy: createdBy,
     });
+
+    // spaceがprivateなら、member全員に通知するんだが。。。
+    const members = await SpaceAndUserRelationship.find({ space: spaceId }).populate({
+      path: 'user',
+      model: 'User',
+      select: '_id pushToken',
+    });
+    const memberPushTokens = members.map((member) => member.user.pushToken).filter((pushToken) => pushToken);
+
+    if (memberPushTokens.length) {
+      const chunks = expo.chunkPushNotifications(
+        memberPushTokens.map((token) => ({
+          to: token,
+          sound: 'default',
+          data: { notificationType: 'post' },
+          title: `${newPost.createdBy.name} posted`,
+          body: caption,
+        }))
+      );
+
+      for (let chunk of chunks) {
+        try {
+          let receipts = await expo.sendPushNotificationsAsync(chunk);
+          tickets.push(...receipts);
+          console.log('Push notifications sent:', receipts);
+        } catch (error) {
+          console.error('Error sending push notification:', error);
+        }
+      }
+    }
 
     response.status(201).json({
       data: {
@@ -1081,5 +1114,49 @@ export const getPostsByUserIdAndRegion = async (request, response) => {
   } catch (error) {
     console.error(error);
     response.status(500).json({ error: 'An error occurred while fetching posts' });
+  }
+};
+
+export const sendPostPushNotification = async (request, response) => {
+  // spaceのidとpostのcontentのimage、caption, userName, postIdをrequestで受け取って、notificationを送る感じかな多分。
+  try {
+    const { spaceId, postId, caption, imageUrl, userName } = request.body;
+    const members = await SpaceAndUserRelationship.find({ space: spaceId }).populate({
+      path: 'user',
+      model: 'User',
+      select: '_id pushToken',
+    });
+    const memberPushTokens = members.map((member) => member.user.pushToken).filter((pushToken) => pushToken);
+
+    // ここを変える感じになるだろね。
+    if (memberPushTokens.length) {
+      const chunks = expo.chunkPushNotifications(
+        memberPushTokens.map((token) => ({
+          to: token,
+          sound: 'default',
+          data: { notificationType: 'post' },
+          title: `${newPost.createdBy.name} posted`,
+          body: caption,
+        }))
+      );
+
+      for (let chunk of chunks) {
+        try {
+          let receipts = await expo.sendPushNotificationsAsync(chunk);
+          tickets.push(...receipts);
+          console.log('Push notifications sent:', receipts);
+        } catch (error) {
+          console.error('Error sending push notification:', error);
+        }
+      }
+    }
+
+    response.status(201).json({
+      data: {
+        message: 'Push notification sent',
+      },
+    });
+  } catch (error) {
+    console.error(error);
   }
 };

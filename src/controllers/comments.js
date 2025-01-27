@@ -32,7 +32,7 @@ export const createComment = async (request, response) => {
         to: post.createdBy.pushToken,
         sound: 'default',
         data: notificationData,
-        title: `New Message from ${request.body.userName}`,
+        title: `💬 ${request.body.userName} commented on your post`,
         body: request.body.content,
       };
       const messages = [];
