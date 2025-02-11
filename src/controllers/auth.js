@@ -8,6 +8,52 @@ import { MembershipStatus } from '../models/membershipStatus.js';
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 // import mailgun from 'mailgun-js'
 // signupで、membershipもつくりたいな。。。
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
+import util from 'util';
+import AWS from 'aws-sdk';
+import { uploadContentToS3, deleteContentFromS3 } from '../services/s3.js';
+
+const deleteFromS3 = async (fileName) => {
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: `avatar/${fileName}`,
+  };
+  return s3.deleteObject(params).promise();
+};
+
+const unlinkFile = util.promisify(fs.unlink);
+
+const getFilePath = (fileName) => {
+  return path.join(path.resolve(), 'buffer', fileName);
+};
+
+const removeFile = async (fileName) => {
+  const filePath = getFilePath(fileName);
+  await unlinkFile(filePath);
+};
+
+const optimizeImage = async (inputFileName, resolution, fit = 'contain') => {
+  const fileInput = getFilePath(inputFileName);
+  const processed = await sharp(fileInput)
+    .rotate()
+    .resize({ height: resolution.height, width: resolution.width, fit })
+    .withMetadata()
+    .webp({ quality: 1 })
+
+    .toBuffer();
+  return processed;
+};
+
+const processAvatar = async (fileName, resolution) => {
+  // Optimize the icon image
+  const iconBinary = await optimizeImage(fileName, resolution);
+  // Upload the optimized icon to S3
+  await uploadContentToS3(fileName, 'avatars', iconBinary);
+  // Remove the local file
+  await removeFile(fileName);
+};
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -40,7 +86,7 @@ export const signup = async (request, response, next) => {
     const user = new User({
       name,
       email,
-      avatar: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/avatars/default-avatar-${randomAvatarNumber}.png`,
+      avatar: null,
       password,
       membershipStatus: membershipStatus._id,
       pushToken: '',
@@ -313,8 +359,40 @@ export const requestResetPassword = async (request, response, next) => {
   }
 };
 
-export const resetPassword = (request, response) => {
+// 基本全部送るようにしようかね。。。
+export const updateMe = async (request, response, next) => {
   try {
+    const { name, email, avatar } = request.body;
+    console.log('request.body', request.body);
+    const user = await User.findById(request.params.userId);
+    if (name) {
+      user.name = name;
+    }
+    if (email) {
+      user.email = email;
+    }
+    if (request.file) {
+      if (user.avatar) {
+        const currentAvatarFileName = user.avatar.split('/').pop();
+        await deleteContentFromS3(currentAvatarFileName, 'avatars');
+      }
+
+      const newAvatarFileName = request.file.filename;
+      await processAvatar(newAvatarFileName, { width: 500, height: 500 });
+      user.avatar = `${process.env.CLOUDFRONT_URL}avatars/${newAvatarFileName}`;
+    }
+    user.save();
+    console.log('send response user', user);
+    response.status(200).json({
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+        },
+      },
+    });
   } catch (error) {
     console.log(error);
   }
