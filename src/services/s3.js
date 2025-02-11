@@ -2,7 +2,7 @@ import fs from 'fs';
 import util from 'util';
 const unlinkFile = util.promisify(fs.unlink);
 import { Upload } from '@aws-sdk/lib-storage';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import path from 'path';
 
@@ -27,6 +27,8 @@ export const uploadPhoto = async (originalFileName, outputFileName, contentType,
   let Key;
   if (contentType === 'icon') {
     Key = `icons/${outputFileName}`;
+  } else if (contentType === 'avatar') {
+    Key = `avatar/${outputFileName}`;
   } else if (contentType === 'photo') {
     Key = `photos/${outputFileName}`;
   } else if (contentType === 'video') {
@@ -60,6 +62,21 @@ export const uploadContentToS3 = async (outputFileName, type, binaryData) => {
     params: uploadParams,
   }).done();
   console.log('📀 content uploaded 📀');
+};
+
+export const deleteContentFromS3 = async (fileName, type) => {
+  const Key = `${type}/${fileName}`;
+  const deleteParams = {
+    Bucket: bucketName,
+    Key: Key,
+  };
+
+  try {
+    await s3.send(new DeleteObjectCommand(deleteParams));
+    console.log(`🗑️ content deleted: ${Key}`);
+  } catch (error) {
+    console.error(`Failed to delete content: ${Key}`, error);
+  }
 };
 
 export const uploadIcon = async (fileName) => {

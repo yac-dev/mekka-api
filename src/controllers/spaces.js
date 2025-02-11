@@ -1,7 +1,7 @@
 import Space from '../models/space.js';
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import Reaction from '../models/reaction.js';
-import { uploadPhoto, uploadIcon } from '../services/s3.js';
+import { uploadPhoto, uploadIcon, uploadContentToS3 } from '../services/s3.js';
 import Post from '../models/post.js';
 import Tag from '../models/tag.js';
 import LocationTag from '../models/locationTag.js';
@@ -9,6 +9,10 @@ import mongoose from 'mongoose';
 import TagUpdateLog from '../models/tagUpdateLog.js';
 import Icon from '../models/icon.js';
 import { colorOptios } from '../utils/colorOptions.js';
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
+import util from 'util';
 
 // space, reactions, spaceAndUserRel, tagを作る。ここのhandlerで。
 function generateRandomString(length) {
@@ -22,6 +26,47 @@ function generateRandomString(length) {
 
   return randomString;
 }
+
+const unlinkFile = util.promisify(fs.unlink);
+
+const getFilePath = (fileName) => {
+  return path.join(path.resolve(), 'buffer', fileName);
+};
+
+const removeFile = async (fileName) => {
+  const filePath = getFilePath(fileName);
+  await unlinkFile(filePath);
+};
+
+const optimizeImage = async (inputFileName, resolution, fit = 'contain') => {
+  const fileInput = getFilePath(inputFileName);
+  const processed = await sharp(fileInput)
+    .rotate()
+    .resize({ height: resolution.height, width: resolution.width, fit })
+    .withMetadata()
+    .webp({ quality: 1 })
+
+    .toBuffer();
+  return processed;
+};
+
+const processImage = async (fileName, resolution) => {
+  // 1 imageを圧縮、
+  const imageBinary = await optimizeImage(fileName, resolution);
+  // 2 そのimageをs3にuploadする。
+  await uploadContentToS3(fileName, 'photos', imageBinary);
+  // 3 そのimageをunlinkする。
+  await removeFile(fileName);
+};
+
+const processIcon = async (fileName, resolution) => {
+  // Optimize the icon image
+  const iconBinary = await optimizeImage(fileName, resolution);
+  // Upload the optimized icon to S3
+  await uploadContentToS3(fileName, 'icons', iconBinary);
+  // Remove the local file
+  await removeFile(fileName);
+};
 
 export const createSpace = async (request, response) => {
   try {
@@ -48,10 +93,13 @@ export const createSpace = async (request, response) => {
 
     // --------------
     // memory storage使ってiconをs3にあげる。
+    // 画像をあげる流れって何だけ。。。？
+    await processIcon(request.file.filename, { height: 512, width: 512 });
     const randomString = generateRandomString(12);
+
     const space = new Space({
       name,
-      icon: `https://mekka-${process.env.NODE_ENV}.s3.us-east-2.amazonaws.com/icons/${request.file.filename}`,
+      icon: `${process.env.CLOUDFRONT_URL}icons/${request.file.filename}`,
       contentType,
       description,
       secretKey: randomString,
@@ -152,7 +200,7 @@ export const createSpace = async (request, response) => {
     });
     // const sharpedImageBinary = await sharpImage(contentObject.fileName);
     //     await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
-    await uploadIcon(request.file.filename);
+    // await uploadIcon(request.file.filename);
     const hashTagIcon = await Icon.findOne({ name: 'hash' });
     //　確かに、作ったあとはもってこれないやシンプルに。
 
@@ -277,10 +325,19 @@ export const getSpaceById = async (request, response) => {
         model: 'User',
         select: '_id name avatar',
       });
-    console.log('hi');
+    const tagDocuments = await Tag.find({ space: space._id }).populate({
+      path: 'icon',
+      model: 'Icon',
+    });
+
+    const plainSpaceObject = space.toObject();
+    plainSpaceObject.tags = tagDocuments;
+
+    console.log('plainSpaceObject', plainSpaceObject);
+
     response.status(200).json({
       data: {
-        space,
+        space: plainSpaceObject,
       },
     });
   } catch (error) {
