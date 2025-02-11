@@ -95,6 +95,64 @@ export const seedPosts = async () => {
       });
       await newPost.save();
     }
+    for (const content of normalContents) {
+      // for (const user of users) {
+      //   const caption = captions[Math.floor(Math.random() * captions.length)];
+      //   const location = locations[Math.floor(Math.random() * locations.length)];
+      //   const newPost = new Post({
+      //     ...post,
+      //     content: [content._id],
+      //     caption,
+      //     space: space._id,
+      //     createdBy: user._id,
+      //     location,
+      //   });
+      //   await newPost.save();
+      // }
+      const caption = captions[Math.floor(Math.random() * captions.length)];
+      const location = locations[Math.floor(Math.random() * locations.length)];
+      const newPost = new Post({
+        ...post,
+        type: 'normal',
+        contents: [content._id],
+        caption,
+        // space: space._id,
+        space: spaces[0]._id,
+        createdBy: users[0]._id,
+        createdAt: new Date(),
+        location,
+      });
+      await newPost.save();
+    }
+    for (const content of normalContents) {
+      // for (const user of users) {
+      //   const caption = captions[Math.floor(Math.random() * captions.length)];
+      //   const location = locations[Math.floor(Math.random() * locations.length)];
+      //   const newPost = new Post({
+      //     ...post,
+      //     content: [content._id],
+      //     caption,
+      //     space: space._id,
+      //     createdBy: user._id,
+      //     location,
+      //   });
+      //   await newPost.save();
+      // }
+      const caption = captions[Math.floor(Math.random() * captions.length)];
+      const location = locations[Math.floor(Math.random() * locations.length)];
+      const newPost = new Post({
+        ...post,
+        type: 'normal',
+        contents: [content._id],
+        caption,
+        // space: space._id,
+        space: spaces[0]._id,
+        createdBy: users[0]._id,
+        createdAt: new Date(),
+        location,
+      });
+      await newPost.save();
+    }
     // }
 
     // momentsをここで作る。
