@@ -1,5 +1,7 @@
 import express from 'express';
 const router = express.Router();
+import multerParser from '../middlewares/multer.js';
+
 import {
   signup,
   loadMe,
@@ -9,6 +11,7 @@ import {
   forgotPassword,
   checkPINcode,
   updatePassword,
+  updateMe,
 } from '../controllers/auth.js';
 import { authorization } from '../middlewares/authorization.js';
 
@@ -20,5 +23,6 @@ router.route('/checkpin').post(checkPINcode);
 router.get('/loadme', authorization, loadMe);
 router.route('/').delete(deleteMe);
 router.route('/:userId/pushToken').patch(registerPushToken);
+router.route('/:userId').patch(multerParser.single('avatar'), updateMe);
 
 export default router;
