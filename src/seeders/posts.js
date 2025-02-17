@@ -182,6 +182,31 @@ export const seedPosts = async () => {
       // }
     }
 
+    for (const content of momentContents) {
+      const caption = captions[Math.floor(Math.random() * captions.length)];
+      const location = locations[Math.floor(Math.random() * locations.length)];
+      const now = new Date();
+      // need one day later for now
+      // const oneDayLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      // momentは今よりも明日で
+      const randomDisappearAt = new Date(now.getTime() + Math.random() * 24 * 60 * 60 * 1000);
+
+      const newPost = new Post({
+        ...post,
+        type: 'moment',
+        contents: [content._id],
+        caption,
+        // space: space._id,
+        space: spaces[0]._id,
+        createdBy: users[0]._id,
+        createdAt: now,
+        location,
+        disappearAt: randomDisappearAt,
+      });
+      await newPost.save();
+      // }
+    }
+
     console.log('🌱 All posts seeded successfully 🌱');
   } catch (error) {
     console.error('🚨 Error seeding posts:', error);
