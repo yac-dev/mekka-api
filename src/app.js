@@ -23,6 +23,7 @@ import notificationsRouter from './routers/notifications.js';
 import userAndReactionRelationshipsRouter from './routers/userAndReactionRelationships.js';
 import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships.js';
 import postAndReactionAndUserRelationshipsRouter from './routers/postAndReactionAndUserRelationships.js';
+import followingRelationshipsRouter from './routers/followingRelationships.js';
 import logsRouter from './routers/logs.js';
 import { handleErrors } from './controllers/errors.js';
 
@@ -52,6 +53,7 @@ app.use('/api/spaceanduserrelationships', spaceAndUserRelationshipsRouter);
 app.use('/api/postandreactionanduserrelationships', postAndReactionAndUserRelationshipsRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/followingrelationships', followingRelationshipsRouter);
 
 app.use(handleErrors);
 

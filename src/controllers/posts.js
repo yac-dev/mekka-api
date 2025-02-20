@@ -734,13 +734,13 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
 
 export const getPostsByUserId = async (request, response) => {
   try {
+    console.log('これ着てる？');
     const page = Number(request.query.page);
     let hasNextPage = true;
     const limitPerPage = 30;
     const sortingCondition = { _id: -1 };
     const documents = await Post.find({
       space: request.params.spaceId,
-      // post: { $ne: null },  // これ意味ない。結局、mongoにはrdbmsにおけるjoin的な機能を持ち合わせていないから。
       createdBy: request.params.userId,
     })
       .sort(sortingCondition)
@@ -752,9 +752,7 @@ export const getPostsByUserId = async (request, response) => {
           model: 'Content',
         },
         { path: 'createdBy', model: 'User', select: '_id name avatar' },
-        { path: 'space', model: 'Space', select: 'reactions' },
       ]);
-
     const posts = documents
       .filter((post) => post.createdBy !== null)
       .map((post, index) => {
