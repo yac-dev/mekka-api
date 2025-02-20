@@ -6,8 +6,6 @@ export const colorOptios = [
   'blue1',
   'indigo1',
   'violet1',
-  'lightGreen1',
-  'lightBlue1',
   'pink1',
   'brown1',
   'gray1',
