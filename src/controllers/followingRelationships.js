@@ -39,7 +39,7 @@ export const getFollowingUsersByUserId = async (request, response) => {
           acc[spaceId] = [];
         }
         acc[spaceId].push({
-          id: followee._id,
+          _id: followee._id,
           name: followee.name,
           email: followee.email,
           avatar: followee.avatar,
