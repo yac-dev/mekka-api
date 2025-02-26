@@ -1,18 +1,20 @@
 import mongoose from 'mongoose';
 
 const momentSchema = mongoose.Schema({
-  contents: [{ type: mongoose.Schema.ObjectId, ref: 'Content' }],
+  contents: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Content',
+    },
+  ],
   caption: String,
-  space: { type: mongoose.Schema.ObjectId, ref: 'Space' },
-  createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
-  createdAt: Date,
-  totalComments: {
-    type: Number,
-    default: 0,
+  space: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Space',
   },
-  totalReactions: {
-    type: Number,
-    default: 0,
+  createdBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
   },
   location: {
     type: {
@@ -22,7 +24,13 @@ const momentSchema = mongoose.Schema({
     },
     coordinates: [Number],
   },
-  disappearAt: Date,
+  disappearAt: {
+    type: Date,
+  },
+  createdAt: {
+    type: Date,
+    default: new Date(),
+  },
 });
 
 const Moment = mongoose.model('Moment', momentSchema);
