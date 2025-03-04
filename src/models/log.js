@@ -16,6 +16,10 @@ const logSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'Post',
   },
+  moment: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Moment',
+  },
   tag: {
     type: mongoose.Schema.ObjectId,
     ref: 'Tag',
