@@ -20,6 +20,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { Expo } from 'expo-server-sdk';
 import mongoose from 'mongoose';
 import Moment from '../models/moment.js';
+import Log from '../models/log.js';
 const expo = new Expo();
 const unlinkFile = util.promisify(fs.unlink);
 
@@ -467,7 +468,6 @@ export const createMoment = async (request, response) => {
     const disappearAt = new Date(new Date().getTime() + Number(disappearAfter) * 60 * 1000);
     const moment = await Moment.create({
       contents: contentDocuments.map((content) => content._id),
-      type: 'moment',
       caption,
       space: spaceId,
       disappearAt: disappearAt,
@@ -483,23 +483,20 @@ export const createMoment = async (request, response) => {
     await Log.create({
       space: spaceId,
       type: 'moment',
-      post: newMoment._id,
+      moment: newMoment._id,
       createdBy,
     });
 
     response.status(201).json({
       data: {
-        post: {
+        moment: {
           _id: newMoment._id,
           contents: contentDocuments,
-          type: newMoment.type,
           caption: newMoment.caption,
           space: spaceId,
           createdBy: newMoment.createdBy,
           createdAt: newMoment.createdAt,
           disappearAt: newMoment.disappearAt,
-          totalComments: 0,
-          totalReactions: 0,
         },
       },
     });
@@ -524,19 +521,10 @@ export const getMomentsBySpaceId = async (request, response) => {
         select: '_id name avatar',
       });
 
-    // const responseData = moments.map((moment) => {
-    //   return {
-    //     _id: moment._id,
-    //     content: {
-    //       data: moment.contents[0].data,
-    //       type: moment.contents[0].type,
-    //     },
-    //     createdAt: moment.createdAt,
-    //     disappearAt: moment.disappearAt,
-    //   };
-    // });
     response.status(200).json({
-      moments,
+      data: {
+        moments,
+      },
     });
   } catch (error) {
     console.log(error);

@@ -73,15 +73,21 @@ const tags = [
 
 const colorOptios = [
   'red1',
-  'yellow1',
   'orange1',
-  'blue1',
-  'violet1',
-  'lightGreen1',
+  'yellow1',
   'green1',
-  'lightBlue1',
+  'blue1',
+  'indigo1',
+  'violet1',
   'pink1',
   'brown1',
+  'gray1',
+  'cyan1',
+  'magenta1',
+  'teal1',
+  'maroon1',
+  'purple1',
+  'olive1',
 ];
 
 // iconのidをどうするかだね。。。hashでいいかね。これごとにiconを持つのも面倒だしな。。。

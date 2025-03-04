@@ -735,6 +735,7 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
 export const getPostsByUserId = async (request, response) => {
   try {
     console.log('これ着てる？');
+    console.log('request.params.userId', request.params.userId, 'request.params.spaceId', request.params.spaceId);
     const page = Number(request.query.page);
     let hasNextPage = true;
     const limitPerPage = 30;
@@ -742,6 +743,7 @@ export const getPostsByUserId = async (request, response) => {
     const documents = await Post.find({
       space: request.params.spaceId,
       createdBy: request.params.userId,
+      type: 'normal',
     })
       .sort(sortingCondition)
       .skip(page * limitPerPage)
@@ -753,30 +755,30 @@ export const getPostsByUserId = async (request, response) => {
         },
         { path: 'createdBy', model: 'User', select: '_id name avatar' },
       ]);
-    const posts = documents
-      .filter((post) => post.createdBy !== null)
-      .map((post, index) => {
-        if (post.type === 'normal') {
-          // const totalComments = await Comment.countDocuments({ post: relationship.post._id });
-          // // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
-          // const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
-          //   post: relationship.post._id,
-          // });
-          // そっかここでやってんのか。。。totalCommentsとか。。。。totalのcomment, totaleReactions取っているから遅くなるんだよな。。。
-          return {
-            _id: post._id,
-            contents: post.contents,
-            type: post.type,
-            caption: post.caption,
-            createdAt: post.createdAt,
-            createdBy: post.createdBy,
-            disappearAt: post.disappearAt,
-            // totalComments,
-            // totalReactions,
-            location: post.location,
-          };
-        }
-      });
+    const posts = documents.filter((post) => post.createdBy !== null);
+    // .map((post, index) => {
+    //   if (post.type === 'normal') {
+    //     // const totalComments = await Comment.countDocuments({ post: relationship.post._id });
+    //     // // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
+    //     // const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
+    //     //   post: relationship.post._id,
+    //     // });
+    //     // そっかここでやってんのか。。。totalCommentsとか。。。。totalのcomment, totaleReactions取っているから遅くなるんだよな。。。
+    //     return {
+    //       _id: post._id,
+    //       contents: post.contents,
+    //       type: post.type,
+    //       caption: post.caption,
+    //       createdAt: post.createdAt,
+    //       createdBy: post.createdBy,
+    //       disappearAt: post.disappearAt,
+    //       // totalComments,
+    //       // totalReactions,
+    //       location: post.location,
+    //     };
+    //   }
+    // });
+    console.log('posts', posts);
 
     const filteredPosts = posts.filter((post) => post);
 
