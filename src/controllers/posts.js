@@ -737,28 +737,47 @@ export const getPostsByUserId = async (request, response) => {
     console.log('これ着てる？');
     console.log('request.params.userId', request.params.userId, 'request.params.spaceId', request.params.spaceId);
     const page = Number(request.query.page);
+    const postType = request.query.postType;
     let hasNextPage = true;
     const limitPerPage = 30;
     const sortingCondition = { _id: -1 };
-    const documents = await Post.find({
-      space: request.params.spaceId,
-      createdBy: request.params.userId,
-      type: 'normal',
-    })
-      .sort(sortingCondition)
-      .skip(page * limitPerPage)
-      .limit(limitPerPage)
-      .populate([
-        {
-          path: 'contents',
-          model: 'Content',
-        },
-        { path: 'createdBy', model: 'User', select: '_id name avatar' },
-      ]);
+
+    let documents;
+    if (postType === 'normal') {
+      documents = await Post.find({
+        space: request.params.spaceId,
+        createdBy: request.params.userId,
+        type: postType,
+      })
+        .sort(sortingCondition)
+        .skip(page * limitPerPage)
+        .limit(limitPerPage)
+        .populate([
+          {
+            path: 'contents',
+            model: 'Content',
+          },
+          { path: 'createdBy', model: 'User', select: '_id name avatar' },
+        ]);
+    } else if (postType === 'moment') {
+      documents = await Post.find({
+        space: request.params.spaceId,
+        createdBy: request.params.userId,
+        type: postType,
+        // disappearAt: { $gt: new Date() },
+      })
+        .sort(sortingCondition)
+        .skip(page * limitPerPage)
+        .limit(limitPerPage)
+        .populate([
+          {
+            path: 'contents',
+            model: 'Content',
+          },
+          { path: 'createdBy', model: 'User', select: '_id name avatar' },
+        ]);
+    }
     const posts = documents.filter((post) => post.createdBy !== null);
-    // .map((post, index) => {
-    //   if (post.type === 'normal') {
-    //     // const totalComments = await Comment.countDocuments({ post: relationship.post._id });
     //     // // const totalReactions = await ReactionStatus.countDocuments({ post: relationship.post._id });
     //     // const totalReactions = await PostAndReactionAndUserRelationship.countDocuments({
     //     //   post: relationship.post._id,

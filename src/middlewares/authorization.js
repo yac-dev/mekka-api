@@ -25,6 +25,7 @@ export const authorization = async (request, response, next) => {
     email: true,
     pushToken: true,
     avatar: true,
+    createdAt: true,
   });
 
   if (!user) {
