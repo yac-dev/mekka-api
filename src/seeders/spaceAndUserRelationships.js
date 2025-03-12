@@ -25,3 +25,8 @@ export const seedSpaceAndUserRelationships = async () => {
     console.error('🔴 Error seeding space and user relationship documents 🔴', error);
   }
 };
+
+export const clearSpaceAndUserRelationships = async () => {
+  await SpaceAndUserRelationship.deleteMany({});
+  console.log('🗑️ All space and user relationship documents deleted 🗑️');
+};

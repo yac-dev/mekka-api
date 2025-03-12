@@ -40,3 +40,8 @@ export const seedPostAndTagRelationships = async () => {
     console.log(error);
   }
 };
+
+export const clearPostAndTagRelationships = async () => {
+  await PostAndTagRelationship.deleteMany({});
+  console.log('🗑️ All post and tag relationships deleted 🗑️');
+};

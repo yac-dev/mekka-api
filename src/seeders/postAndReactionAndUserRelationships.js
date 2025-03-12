@@ -44,3 +44,8 @@ export const seedPostAndReactionAndUserRelationships = async () => {
     console.error('Error deleting post and reaction and user relationships:', error);
   }
 };
+
+export const clearPostAndReactionAndUserRelationships = async () => {
+  await PostAndReactionAndUserRelationship.deleteMany({});
+  console.log('🗑️ All post and reaction and user relationships deleted 🗑️');
+};
