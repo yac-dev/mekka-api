@@ -1,5 +1,7 @@
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import User from '../models/user.js';
+import Tag from '../models/tag.js';
+import mongoose from 'mongoose';
 
 export const getUsersBySpaceId = async (request, response) => {
   try {
@@ -49,6 +51,211 @@ export const getUsersByAddress = async (request, response) => {
     });
 
     response.status(200).json({ data: { users: mapped } });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// export const getSpacesByUserId = async (request, response) => {
+//   try {
+//     // ここら辺とか、完全にaggregationでできるよね。自分でチャレンジしてみよう。
+//     const documents = await SpaceAndUserRelationship.find({
+//       user: request.params.userId,
+//     }).populate({
+//       path: 'space',
+//       populate: [
+//         {
+//           path: 'reactions',
+//           select: '_id type emoji sticker caption',
+//           model: 'Reaction',
+//           populate: {
+//             path: 'sticker',
+//             model: 'Sticker',
+//           },
+//         },
+//         {
+//           path: 'createdBy',
+//           select: '_id name avatar',
+//         },
+//       ],
+//     });
+
+//     const spaceAndUserRelationships = documents.filter((relationship) => relationship.space !== null);
+//     const mySpaces = spaceAndUserRelationships.map((relationship) => relationship.space);
+//     const spaceIds = spaceAndUserRelationships.map((relationship) => relationship.space._id);
+//     const tagDocuments = await Tag.find({ space: { $in: spaceIds } }).populate({
+//       path: 'icon',
+//       model: 'Icon',
+//     });
+//     const tagsBySpaceId = {};
+
+//     for (const tag of tagDocuments) {
+//       const spaceId = tag.space.toString(); // Ensure the space ID is a string
+//       if (!tagsBySpaceId[spaceId]) {
+//         tagsBySpaceId[spaceId] = [];
+//       }
+//       tagsBySpaceId[spaceId].push(tag);
+//     }
+
+//     const newMySpaces = mySpaces.map((space) => {
+//       //NOTE const copied = {...space} //これだと、mongoの隠れたproperty福含め全部撮ってきちゃってる。。。面倒だ。。
+//       // ここ、ちょうどいい勉強材料になるな。。
+//       const plainSpaceObject = space.toObject();
+//       const spaceId = space._id.toString();
+//       plainSpaceObject.tags = tagsBySpaceId[spaceId] || [];
+//       return plainSpaceObject;
+//     });
+
+//     response.status(200).json({
+//       data: {
+//         mySpaces: newMySpaces,
+//         // updateTable,
+//       },
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
+
+export const getSpacesByUserId = async (request, response) => {
+  try {
+    const spaces = await SpaceAndUserRelationship.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(request.params.userId) } },
+      {
+        $lookup: {
+          from: 'spaces',
+          localField: 'space',
+          foreignField: '_id',
+          as: 'spaceDetail',
+        },
+      },
+      { $unwind: '$spaceDetail' },
+      {
+        $lookup: {
+          from: 'reactions',
+          localField: 'spaceDetail.reactions',
+          foreignField: '_id',
+          as: 'reactions',
+        },
+      },
+      {
+        $lookup: {
+          from: 'stickers',
+          localField: 'reactions.sticker',
+          foreignField: '_id',
+          as: 'stickerDetail',
+        },
+      },
+      {
+        $lookup: {
+          from: 'tags',
+          localField: 'spaceDetail._id',
+          foreignField: 'space',
+          as: 'tags',
+        },
+      },
+      {
+        $lookup: {
+          from: 'icons',
+          localField: 'tags.icon',
+          foreignField: '_id',
+          as: 'iconDetail',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'spaceDetail.createdBy',
+          foreignField: '_id',
+          as: 'createdByDetail',
+        },
+      },
+      { $unwind: '$createdByDetail' },
+      {
+        $addFields: {
+          reactions: {
+            $map: {
+              input: '$reactions',
+              as: 'reaction',
+              in: {
+                $mergeObjects: [
+                  '$$reaction',
+                  {
+                    sticker: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$stickerDetail',
+                            as: 'sticker',
+                            cond: { $eq: ['$$sticker._id', '$$reaction.sticker'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          tags: {
+            $map: {
+              input: '$tags',
+              as: 'tag',
+              in: {
+                $mergeObjects: [
+                  '$$tag',
+                  {
+                    icon: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$iconDetail',
+                            as: 'icon',
+                            cond: { $eq: ['$$icon._id', '$$tag.icon'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: '$spaceDetail._id',
+          name: '$spaceDetail.name',
+          icon: '$spaceDetail.icon',
+          contentType: '$spaceDetail.contentType',
+          isPublic: '$spaceDetail.isPublic',
+          isCommentAvailable: '$spaceDetail.isCommentAvailable',
+          isReactionAvailable: '$spaceDetail.isReactionAvailable',
+          disappearAfter: '$spaceDetail.disappearAfter',
+          description: '$spaceDetail.description',
+          videoLength: '$spaceDetail.videoLength',
+          isFollowAvailable: '$spaceDetail.isFollowAvailable',
+          isPublic: '$spaceDetail.isPublic',
+          reactions: 1,
+          tags: 1,
+          createdBy: {
+            _id: '$createdByDetail._id',
+            name: '$createdByDetail.name',
+            email: '$createdByDetail.email',
+            avatar: '$createdByDetail.avatar',
+          },
+        },
+      },
+    ]);
+
+    response.status(200).json({
+      data: {
+        mySpaces: spaces,
+      },
+    });
   } catch (error) {
     console.log(error);
   }
