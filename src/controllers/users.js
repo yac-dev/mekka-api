@@ -253,7 +253,7 @@ export const getSpacesByUserId = async (request, response) => {
 
     response.status(200).json({
       data: {
-        mySpaces: spaces,
+        spaces,
       },
     });
   } catch (error) {
