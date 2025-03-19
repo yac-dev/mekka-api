@@ -684,3 +684,13 @@ export const getSpaceBySecretKey = async (request, response) => {
     console.log(error);
   }
 };
+
+// export const getUsersBySpaceId = async (request, response) => {
+//   try {
+//     const { spaceId } = request.params;
+//     const users = await SpaceAndUserRelationship.find({ space: spaceId }).populate({ path: 'user' });
+//     response.status(200).json({ users });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };

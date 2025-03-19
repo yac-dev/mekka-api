@@ -172,6 +172,14 @@ export const getSpacesByUserId = async (request, response) => {
       },
       { $unwind: '$createdByDetail' },
       {
+        $lookup: {
+          from: 'spaceanduserrelationships',
+          localField: 'spaceDetail._id',
+          foreignField: 'space',
+          as: 'userDetails',
+        },
+      },
+      {
         $addFields: {
           reactions: {
             $map: {
@@ -237,6 +245,7 @@ export const getSpacesByUserId = async (request, response) => {
           disappearAfter: '$spaceDetail.disappearAfter',
           description: '$spaceDetail.description',
           videoLength: '$spaceDetail.videoLength',
+          secretKey: '$spaceDetail.secretKey',
           isFollowAvailable: '$spaceDetail.isFollowAvailable',
           isPublic: '$spaceDetail.isPublic',
           reactions: 1,
@@ -247,6 +256,7 @@ export const getSpacesByUserId = async (request, response) => {
             email: '$createdByDetail.email',
             avatar: '$createdByDetail.avatar',
           },
+          totalMembers: { $size: '$userDetails' },
         },
       },
     ]);
