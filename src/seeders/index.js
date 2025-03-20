@@ -1,14 +1,17 @@
-import { seedUsers } from './users.js';
-import { seedSpaces } from './spaces.js';
-import { seedSpaceAndUserRelationships } from './spaceAndUserRelationships.js';
-import { seedTags } from './tags.js';
-import { seedContents } from './contents.js';
-import { seedPosts } from './posts.js';
-import { seedPostAndTagRelationships } from './postAndTagRelationships.js';
-import { seedLogs } from './logs.js';
-import { seedPostAndReactionAndUserRelationships } from './postAndReactionAndUserRelationships.js';
-import { seedReactions } from './reactions.js';
-import { seedComments } from './comments.js';
+import { seedUsers, clearUsers } from './users.js';
+import { seedSpaces, clearSpaces } from './spaces.js';
+import { seedSpaceAndUserRelationships, clearSpaceAndUserRelationships } from './spaceAndUserRelationships.js';
+import { seedTags, clearTags } from './tags.js';
+import { seedContents, clearContents } from './contents.js';
+import { seedPosts, clearPosts } from './posts.js';
+import { seedPostAndTagRelationships, clearPostAndTagRelationships } from './postAndTagRelationships.js';
+import { seedLogs, clearLogs } from './logs.js';
+import {
+  seedPostAndReactionAndUserRelationships,
+  clearPostAndReactionAndUserRelationships,
+} from './postAndReactionAndUserRelationships.js';
+import { seedReactions, clearReactions } from './reactions.js';
+import { seedComments, clearComments } from './comments.js';
 
 import mongoose from 'mongoose';
 
@@ -25,7 +28,22 @@ mongoose
     console.log(error);
   });
 
-const main = async () => {
+const clearCollections = async () => {
+  // Delete all documents from each collection
+  await clearUsers();
+  await clearSpaces();
+  await clearReactions();
+  await clearSpaceAndUserRelationships();
+  await clearTags();
+  await clearContents();
+  await clearPosts();
+  await clearPostAndTagRelationships();
+  await clearLogs();
+  await clearPostAndReactionAndUserRelationships();
+  await clearComments();
+};
+
+const seedCollections = async () => {
   await seedUsers();
   await seedSpaces();
   await seedReactions();
@@ -37,6 +55,32 @@ const main = async () => {
   await seedLogs();
   await seedPostAndReactionAndUserRelationships();
   await seedComments();
+};
+
+const main = async () => {
+  const command = process.argv[2];
+
+  try {
+    switch (command) {
+      case 'clear':
+        await clearCollections();
+        console.log('✨ All collections cleared ✨');
+        break;
+      case 'seed':
+        await seedCollections();
+        console.log('🌱 Database seeded successfully 🌱');
+        break;
+      case 'reset':
+        await clearCollections();
+        await seedCollections();
+        console.log('🔄 Database reset completed 🔄');
+        break;
+      default:
+        console.log('Please specify a command: clear, seed, or reset');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
   process.exit(0);
 };
 

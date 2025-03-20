@@ -66,3 +66,8 @@ export const seedReactions = async () => {
     console.log(error);
   }
 };
+
+export const clearReactions = async () => {
+  await Reaction.deleteMany({});
+  console.log('🗑️ All reactions deleted 🗑️');
+};

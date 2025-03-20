@@ -49,3 +49,8 @@ export const seedUsers = async () => {
     console.error('Error seeding users:', error);
   }
 };
+
+export const clearUsers = async () => {
+  await User.deleteMany({});
+  console.log('🗑️ All user documents deleted 🗑️');
+};

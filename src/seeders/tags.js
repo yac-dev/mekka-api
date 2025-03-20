@@ -118,3 +118,8 @@ export const seedTags = async () => {
     console.error(error);
   }
 };
+
+export const clearTags = async () => {
+  await Tag.deleteMany({});
+  console.log('🗑️ All tag documents deleted 🗑️');
+};

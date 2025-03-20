@@ -48,3 +48,8 @@ export const seedLogs = async () => {
     console.error('🔴 Error seeding logs 🔴', error);
   }
 };
+
+export const clearLogs = async () => {
+  await Log.deleteMany({});
+  console.log('🗑️ All log documents deleted 🗑️');
+};
