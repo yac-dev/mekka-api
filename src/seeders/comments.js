@@ -36,3 +36,8 @@ export const seedComments = async () => {
     console.error('🚨 Error seeding posts:', error);
   }
 };
+
+export const clearComments = async () => {
+  await Comment.deleteMany({});
+  console.log('🗑️ All comment documents deleted 🗑️');
+};

@@ -45,3 +45,8 @@ export const seedContents = async () => {
     console.log(error);
   }
 };
+
+export const clearContents = async () => {
+  await Content.deleteMany({});
+  console.log('🗑️ All content documents deleted 🗑️');
+};

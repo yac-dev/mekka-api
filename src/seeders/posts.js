@@ -212,3 +212,8 @@ export const seedPosts = async () => {
     console.error('🚨 Error seeding posts:', error);
   }
 };
+
+export const clearPosts = async () => {
+  await Post.deleteMany({});
+  console.log('🗑️ All post documents deleted 🗑️');
+};

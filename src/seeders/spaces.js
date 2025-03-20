@@ -68,3 +68,8 @@ export const seedSpaces = async () => {
     console.log(error);
   }
 };
+
+export const clearSpaces = async () => {
+  await Space.deleteMany({});
+  console.log('🗑️ All space documents deleted 🗑️');
+};
