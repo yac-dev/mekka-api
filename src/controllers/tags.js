@@ -97,6 +97,7 @@ export const getPostsByTagId = async (request, response) => {
       },
       // ここでなんか配列からobjectに変換しているっぽい。
       { $unwind: '$postDetails' },
+      { $match: { 'postDetails.type': { $ne: 'moment' } } },
       {
         $lookup: {
           from: 'comments',
