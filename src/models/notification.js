@@ -4,25 +4,21 @@ import mongoose from 'mongoose';
 // どのpostにcommentしたか、
 // どのpostにreactionをしたか
 const notificationSchema = mongoose.Schema({
+  to: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+  },
+  type: {
+    type: String,
+    enum: ['comment', 'reaction', 'tag'],
+  },
   post: {
     type: mongoose.Schema.ObjectId,
     ref: 'Post',
   },
-  space: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'Space',
-  },
   comment: {
     type: mongoose.Schema.ObjectId,
     ref: 'Comment',
-  },
-  reaction: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'Reaction',
-  },
-  tag: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'Tag',
   },
   createdBy: {
     type: mongoose.Schema.ObjectId,

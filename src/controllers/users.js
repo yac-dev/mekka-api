@@ -257,6 +257,7 @@ export const getSpacesByUserId = async (request, response) => {
             avatar: '$createdByDetail.avatar',
           },
           totalMembers: { $size: '$userDetails' },
+          createdAt: '$spaceDetail.createdAt',
         },
       },
     ]);
