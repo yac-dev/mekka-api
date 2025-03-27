@@ -929,6 +929,7 @@ export const getMomentPostsBySpaceId = async (request, response) => {
 //   }
 // };
 
+// spaceIdがいらないと思うのと、そもそもなんでreactions から取ってきているんだ？
 export const getReactionsByPostId = async (request, response) => {
   try {
     const { postId, spaceId } = request.params;
