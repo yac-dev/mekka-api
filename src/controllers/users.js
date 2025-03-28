@@ -1,6 +1,6 @@
 import SpaceAndUserRelationship from '../models/spaceAndUserRelationship.js';
 import User from '../models/user.js';
-import Tag from '../models/tag.js';
+import Notification from '../models/notification.js';
 import mongoose from 'mongoose';
 
 export const getUsersBySpaceId = async (request, response) => {
@@ -265,6 +265,82 @@ export const getSpacesByUserId = async (request, response) => {
     response.status(200).json({
       data: {
         spaces,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getNotificationsByUserId = async (request, response) => {
+  try {
+    const { userId } = request.params;
+    const notifications = await Notification.aggregate([
+      { $match: { to: new mongoose.Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'createdByDetail',
+        },
+      },
+      { $unwind: '$createdByDetail' },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'comment',
+          foreignField: '_id',
+          as: 'commentDetail',
+        },
+      },
+      { $unwind: '$commentDetail' },
+      {
+        $lookup: {
+          from: 'reactions',
+          localField: 'reaction',
+          foreignField: '_id',
+          as: 'reactionDetail',
+        },
+      },
+      { $unwind: '$reactionDetail' },
+      {
+        $lookup: {
+          from: 'posts',
+          localField: 'post',
+          foreignField: '_id',
+          as: 'postDetail',
+        },
+      },
+      { $unwind: '$postDetail' },
+      {
+        $lookup: {
+          from: 'contents',
+          localField: 'postDetail.content',
+          foreignField: '_id',
+          as: 'contentDetail',
+        },
+      },
+      { $unwind: '$contentDetail' },
+      // {
+      //   $project: {
+      //     _id: 1,
+      //     type: 1,
+      //     createdAt: 1,
+      //     createdBy: 1,
+      //     comment: 1,
+      //     reaction: 1,
+      //     post: 1,
+      //     content: 1,
+      //     commentDetail: 1,
+      //     reactionDetail: 1,
+
+      //   },
+      // },
+    ]);
+    response.status(200).json({
+      data: {
+        notifications,
       },
     });
   } catch (error) {

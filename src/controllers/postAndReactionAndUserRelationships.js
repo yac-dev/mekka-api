@@ -1,5 +1,6 @@
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import mongoose from 'mongoose';
+import Notification from '../models/notification.js';
 
 // このaggregation pipelineをうまく使えるようになりたいわな。。。
 // aggregationでは、
@@ -70,6 +71,9 @@ export const getReactionsByPostId = async (request, response) => {
   }
 };
 
+// postにreactionしますっていう意味合いだからね。多分postsの方に行った方がいいかも。
+// reactionの取り消し、一旦なし。
+// /posts/:postId/reaction/
 export const createReaction = async (request, response) => {
   try {
     const { postId, reactionId, userId } = request.body;
@@ -79,7 +83,14 @@ export const createReaction = async (request, response) => {
       user: userId,
     });
 
-    console.log('created', reaction);
+    const notification = await Notification.create({
+      to: userId,
+      type: 'reaction',
+      post: postId,
+      reaction: reactionId,
+      createdBy: userId,
+    });
+
     response.status(201).json({
       data: {
         reaction,
