@@ -289,21 +289,19 @@ export const getNotificationsByUserId = async (request, response) => {
       {
         $lookup: {
           from: 'comments',
-          localField: 'comment',
-          foreignField: '_id',
+          let: { commentId: '$comment' },
+          pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$commentId'] } } }, { $limit: 1 }],
           as: 'commentDetail',
         },
       },
-      { $unwind: '$commentDetail' },
       {
         $lookup: {
           from: 'reactions',
-          localField: 'reaction',
-          foreignField: '_id',
+          let: { reactionId: '$reaction' },
+          pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$reactionId'] } } }, { $limit: 1 }],
           as: 'reactionDetail',
         },
       },
-      { $unwind: '$reactionDetail' },
       {
         $lookup: {
           from: 'posts',
@@ -315,28 +313,44 @@ export const getNotificationsByUserId = async (request, response) => {
       { $unwind: '$postDetail' },
       {
         $lookup: {
+          from: 'users',
+          localField: 'postDetail.createdBy',
+          foreignField: '_id',
+          as: 'postCreatedByDetail',
+        },
+      },
+      { $unwind: '$postCreatedByDetail' },
+      {
+        $lookup: {
           from: 'contents',
-          localField: 'postDetail.content',
+          localField: 'postDetail.contents',
           foreignField: '_id',
           as: 'contentDetail',
         },
       },
       { $unwind: '$contentDetail' },
-      // {
-      //   $project: {
-      //     _id: 1,
-      //     type: 1,
-      //     createdAt: 1,
-      //     createdBy: 1,
-      //     comment: 1,
-      //     reaction: 1,
-      //     post: 1,
-      //     content: 1,
-      //     commentDetail: 1,
-      //     reactionDetail: 1,
-
-      //   },
-      // },
+      {
+        $addFields: {
+          commentDetail: { $arrayElemAt: ['$commentDetail', 0] },
+          reactionDetail: { $arrayElemAt: ['$reactionDetail', 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          type: 1,
+          createdAt: 1,
+          createdBy: '$createdByDetail',
+          post: {
+            _id: '$postDetail._id',
+            contents: '$contentDetail',
+            createdBy: '$postCreatedByDetail',
+            createdAt: '$postDetail.createdAt',
+          },
+          comment: '$commentDetail',
+          reaction: '$reactionDetail',
+        },
+      },
     ]);
     response.status(200).json({
       data: {
