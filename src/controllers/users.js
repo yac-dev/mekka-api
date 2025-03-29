@@ -272,11 +272,15 @@ export const getSpacesByUserId = async (request, response) => {
   }
 };
 
+// これ、、、loadmeでいけるのかなーーー。。。
+// ここもpaginationを実装したいよな。。。数は出して、ベルマーク押したらもう全部readにするようpatch requestを送る感じにするか。
+// 開いたら、みんなreadにpatchすればいっか。
+// bellマークにバッジはつけておいて、開いたらバッジは消す、帰ってきたら、patchかな。。。？それかもう開いた時点で全部readにしてしまうか。。。
 export const getNotificationsByUserId = async (request, response) => {
   try {
     const { userId } = request.params;
     const notifications = await Notification.aggregate([
-      { $match: { to: new mongoose.Types.ObjectId(userId) } },
+      { $match: { to: new mongoose.Types.ObjectId(userId), isRead: false } },
       {
         $lookup: {
           from: 'users',
