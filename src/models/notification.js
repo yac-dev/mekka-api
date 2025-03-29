@@ -28,6 +28,10 @@ const notificationSchema = mongoose.Schema({
     type: Date,
     default: new Date(),
   },
+  isRead: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const Notification = mongoose.model('Notification', notificationSchema);
