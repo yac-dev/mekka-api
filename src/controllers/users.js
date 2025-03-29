@@ -283,6 +283,24 @@ export const getNotificationsByUserId = async (request, response) => {
       { $match: { to: new mongoose.Types.ObjectId(userId), isRead: false } },
       {
         $lookup: {
+          from: 'spaces',
+          localField: 'space',
+          foreignField: '_id',
+          as: 'spaceDetail',
+        },
+      },
+      { $unwind: '$spaceDetail' },
+      {
+        $lookup: {
+          from: 'posts',
+          localField: 'post',
+          foreignField: '_id',
+          as: 'postDetail',
+        },
+      },
+      { $unwind: '$postDetail' },
+      {
+        $lookup: {
           from: 'users',
           localField: 'createdBy',
           foreignField: '_id',
@@ -306,15 +324,6 @@ export const getNotificationsByUserId = async (request, response) => {
           as: 'reactionDetail',
         },
       },
-      {
-        $lookup: {
-          from: 'posts',
-          localField: 'post',
-          foreignField: '_id',
-          as: 'postDetail',
-        },
-      },
-      { $unwind: '$postDetail' },
       {
         $lookup: {
           from: 'users',
@@ -344,7 +353,17 @@ export const getNotificationsByUserId = async (request, response) => {
           _id: 1,
           type: 1,
           createdAt: 1,
-          createdBy: '$createdByDetail',
+          createdBy: {
+            _id: '$createdByDetail._id',
+            name: '$createdByDetail.name',
+            email: '$createdByDetail.email',
+            avatar: '$createdByDetail.avatar',
+          },
+          space: {
+            _id: '$spaceDetail._id',
+            name: '$spaceDetail.name',
+            icon: '$spaceDetail.icon',
+          },
           post: {
             _id: '$postDetail._id',
             contents: '$contentDetail',
@@ -353,6 +372,7 @@ export const getNotificationsByUserId = async (request, response) => {
           },
           comment: '$commentDetail',
           reaction: '$reactionDetail',
+          isRead: 1,
         },
       },
     ]);
@@ -365,3 +385,117 @@ export const getNotificationsByUserId = async (request, response) => {
     console.log(error);
   }
 };
+
+// export const getNotificationsByUserId = async (request, response) => {
+//   try {
+//     const { userId } = request.params;
+//     const notifications = await Notification.aggregate([
+//       { $match: { to: new mongoose.Types.ObjectId(userId), isRead: false } },
+//       {
+//         $lookup: {
+//           from: 'spaces',
+//           localField: 'space',
+//           foreignField: '_id',
+//           as: 'spaceDetail',
+//         },
+//       },
+//       { $unwind: '$spaceDetail' },
+//       {
+//         $lookup: {
+//           from: 'posts',
+//           localField: 'post',
+//           foreignField: '_id',
+//           as: 'postDetail',
+//         },
+//       },
+//       { $unwind: '$postDetail' },
+//       {
+//         $lookup: {
+//           from: 'users',
+//           localField: 'createdBy',
+//           foreignField: '_id',
+//           as: 'createdByDetail',
+//         },
+//       },
+//       { $unwind: '$createdByDetail' },
+//       {
+//         $lookup: {
+//           from: 'comments',
+//           let: { commentId: '$comment' },
+//           pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$commentId'] } } }, { $limit: 1 }],
+//           as: 'commentDetail',
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'reactions',
+//           let: { reactionId: '$reaction' },
+//           pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$reactionId'] } } }, { $limit: 1 }],
+//           as: 'reactionDetail',
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'stickers',
+//           localField: 'reactionDetail.sticker',
+//           foreignField: '_id',
+//           as: 'stickerDetail',
+//         },
+//       },
+//       {
+//         $addFields: {
+//           commentDetail: { $arrayElemAt: ['$commentDetail', 0] },
+//           reactionDetail: {
+//             $let: {
+//               vars: {
+//                 reaction: { $arrayElemAt: ['$reactionDetail', 0] },
+//                 sticker: { $arrayElemAt: ['$stickerDetail', 0] },
+//               },
+//               in: {
+//                 $cond: {
+//                   if: { $eq: ['$$reaction.type', 'sticker'] },
+//                   then: { $mergeObjects: ['$$reaction', { sticker: '$$sticker' }] },
+//                   else: '$$reaction',
+//                 },
+//               },
+//             },
+//           },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 1,
+//           type: 1,
+//           createdAt: 1,
+//           createdBy: {
+//             _id: '$createdByDetail._id',
+//             name: '$createdByDetail.name',
+//             email: '$createdByDetail.email',
+//             avatar: '$createdByDetail.avatar',
+//           },
+//           space: {
+//             _id: '$spaceDetail._id',
+//             name: '$spaceDetail.name',
+//             icon: '$spaceDetail.icon',
+//           },
+//           post: {
+//             _id: '$postDetail._id',
+//             contents: '$contentDetail',
+//             createdBy: '$postCreatedByDetail',
+//             createdAt: '$postDetail.createdAt',
+//           },
+//           comment: '$commentDetail',
+//           reaction: '$reactionDetail',
+//           isRead: 1,
+//         },
+//       },
+//     ]);
+//     response.status(200).json({
+//       data: {
+//         notifications,
+//       },
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
