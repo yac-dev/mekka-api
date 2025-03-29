@@ -1,7 +1,7 @@
 import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAndUserRelationship.js';
 import mongoose from 'mongoose';
 import Notification from '../models/notification.js';
-
+import Post from '../models/post.js';
 // このaggregation pipelineをうまく使えるようになりたいわな。。。
 // aggregationでは、
 // ok　落ち着け。ここでやりたいのはシンプルに、postIdを使ってまずreactionをとってくることね。
@@ -74,22 +74,34 @@ export const getReactionsByPostId = async (request, response) => {
 // postにreactionしますっていう意味合いだからね。多分postsの方に行った方がいいかも。
 // reactionの取り消し、一旦なし。
 // /posts/:postId/reaction/
+// routingそもそもされていない。。。
 export const createReaction = async (request, response) => {
   try {
     const { postId, reactionId, userId } = request.body;
+    console.log('increment動いてねー??', postId, reactionId, userId);
     const reaction = await PostAndReactionAndUserRelationship.create({
       post: postId,
       reaction: reactionId,
       user: userId,
     });
 
+    const post = await Post.findById(postId).populate({
+      path: 'createdBy',
+    });
+
+    // if (post.createdBy._id.toString() !== request.body.userId.toString()) {
+    // あとさ、reactionできるのは一つのreactionに一回のみとする。
+
     const notification = await Notification.create({
-      to: userId,
+      to: post.createdBy._id,
       type: 'reaction',
+      space: post.space._id,
       post: postId,
       reaction: reactionId,
       createdBy: userId,
+      isRead: false,
     });
+    // }
 
     response.status(201).json({
       data: {
