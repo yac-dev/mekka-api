@@ -83,6 +83,7 @@ export const createReaction = async (request, response) => {
       post: postId,
       reaction: reactionId,
       user: userId,
+      createdAt: new Date(),
     });
 
     const post = await Post.findById(postId).populate({

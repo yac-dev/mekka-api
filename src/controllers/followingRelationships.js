@@ -7,6 +7,7 @@ export const createFollowingRelationship = async (request, response) => {
       follower: followerId,
       followee: followeeId,
       space: spaceId,
+      createdAt: new Date(),
     });
     response.status(201).json({
       data: {

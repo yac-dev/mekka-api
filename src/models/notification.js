@@ -38,7 +38,6 @@ const notificationSchema = mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: new Date(),
   },
   isRead: {
     type: Boolean,
