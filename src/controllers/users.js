@@ -395,7 +395,7 @@ export const getNotificationsByUserId = async (request, response) => {
     const sortingCondition = { _id: -1 };
 
     const notifications = await Notification.aggregate([
-      { $match: { to: new mongoose.Types.ObjectId(userId), isRead: false } },
+      { $match: { to: new mongoose.Types.ObjectId(userId) } },
       { $sort: sortingCondition },
       { $skip: page * limitPerPage },
       { $limit: limitPerPage },
