@@ -14,6 +14,7 @@ import fs from 'fs';
 import util from 'util';
 import AWS from 'aws-sdk';
 import { uploadContentToS3, deleteContentFromS3 } from '../services/s3.js';
+import Notification from '../models/notification.js';
 
 const deleteFromS3 = async (fileName) => {
   const params = {
@@ -132,6 +133,8 @@ export const signup = async (request, response, next) => {
 export const loadMe = async (request, response) => {
   const { user } = request;
   try {
+    const hasUnreadNotification = await Notification.exists({ to: user._id, isRead: false });
+
     response.status(200).json({
       status: 'success',
       data: {
@@ -142,6 +145,7 @@ export const loadMe = async (request, response) => {
           avatar: user.avatar,
           pushToken: user.pushToken,
           createdAt: user.createdAt,
+          hasUnreadNotification,
         },
       },
     });
