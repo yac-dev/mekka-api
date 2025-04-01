@@ -389,8 +389,16 @@ export const getSpacesByUserId = async (request, response) => {
 export const getNotificationsByUserId = async (request, response) => {
   try {
     const { userId } = request.params;
+    const page = Number(request.query.page);
+    let hasNextPage = true;
+    const limitPerPage = 20;
+    const sortingCondition = { _id: -1 };
+
     const notifications = await Notification.aggregate([
       { $match: { to: new mongoose.Types.ObjectId(userId), isRead: false } },
+      { $sort: sortingCondition },
+      { $skip: page * limitPerPage },
+      { $limit: limitPerPage },
       {
         $lookup: {
           from: 'spaces',
@@ -512,9 +520,14 @@ export const getNotificationsByUserId = async (request, response) => {
         },
       },
     ]);
+
+    if (!notifications.length) hasNextPage = false;
+
     response.status(200).json({
       data: {
         notifications,
+        currentPage: page + 1,
+        hasNextPage,
       },
     });
   } catch (error) {
