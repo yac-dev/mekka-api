@@ -534,3 +534,15 @@ export const getNotificationsByUserId = async (request, response) => {
     console.log(error);
   }
 };
+
+export const readNotifications = async (request, response) => {
+  try {
+    const { userId } = request.params;
+    await Notification.updateMany({ to: userId, isRead: false }, { $set: { isRead: true } });
+    response.status(200).json({
+      data: {},
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
