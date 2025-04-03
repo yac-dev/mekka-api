@@ -133,11 +133,18 @@ export const signup = async (request, response, next) => {
 export const loadMe = async (request, response) => {
   const { user } = request;
   try {
-    const lastNotificationOpened = user.lastNotificationOpened;
-    const hasNewNotification = await Notification.exists({
-      to: user._id,
-      createdAt: { $gt: lastNotificationOpened },
-    });
+    const notificationOpenedAt = user.notificationOpenedAt;
+    let hasNewNotification = false;
+    if (!notificationOpenedAt) {
+      hasNewNotification = await Notification.exists({
+        to: user._id,
+      });
+    } else {
+      hasNewNotification = await Notification.exists({
+        to: user._id,
+        createdAt: { $gt: notificationOpenedAt },
+      });
+    }
 
     response.status(200).json({
       status: 'success',
@@ -149,6 +156,7 @@ export const loadMe = async (request, response) => {
           avatar: user.avatar,
           pushToken: user.pushToken,
           createdAt: user.createdAt,
+          notificationOpenedAt: user.notificationOpenedAt,
           hasNewNotification,
         },
       },
@@ -371,7 +379,7 @@ export const requestResetPassword = async (request, response, next) => {
 export const updateMe = async (request, response, next) => {
   try {
     const { name, email, notificationOpenedAt } = request.body;
-    console.log('request.body', request.body);
+    console.log('update me 動いてる？', request.body);
     const user = await User.findById(request.params.userId);
     if (name) {
       user.name = name;
@@ -401,7 +409,7 @@ export const updateMe = async (request, response, next) => {
           name: user.name,
           email: user.email,
           avatar: user.avatar,
-          lastNotificationOpenedAt: user.lastNotificationOpenedAt,
+          notificationOpenedAt: user.notificationOpenedAt,
         },
       },
     });
