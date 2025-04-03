@@ -36,7 +36,7 @@ const userSchema = mongoose.Schema({
     type: Date,
     default: new Date(),
   },
-  lastNotificationOpened: {
+  notificationOpenedAt: {
     type: Date,
     default: null,
   },

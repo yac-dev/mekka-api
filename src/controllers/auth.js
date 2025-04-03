@@ -133,7 +133,11 @@ export const signup = async (request, response, next) => {
 export const loadMe = async (request, response) => {
   const { user } = request;
   try {
-    const hasUnreadNotification = await Notification.exists({ to: user._id, isRead: false });
+    const lastNotificationOpened = user.lastNotificationOpened;
+    const hasNewNotification = await Notification.exists({
+      to: user._id,
+      createdAt: { $gt: lastNotificationOpened },
+    });
 
     response.status(200).json({
       status: 'success',
@@ -145,7 +149,7 @@ export const loadMe = async (request, response) => {
           avatar: user.avatar,
           pushToken: user.pushToken,
           createdAt: user.createdAt,
-          hasUnreadNotification,
+          hasNewNotification,
         },
       },
     });
@@ -366,7 +370,7 @@ export const requestResetPassword = async (request, response, next) => {
 // 基本全部送るようにしようかね。。。
 export const updateMe = async (request, response, next) => {
   try {
-    const { name, email, avatar } = request.body;
+    const { name, email, notificationOpenedAt } = request.body;
     console.log('request.body', request.body);
     const user = await User.findById(request.params.userId);
     if (name) {
@@ -385,6 +389,9 @@ export const updateMe = async (request, response, next) => {
       await processAvatar(newAvatarFileName, { width: 500, height: 500 });
       user.avatar = `${process.env.CLOUDFRONT_URL}avatars/${newAvatarFileName}`;
     }
+    if (notificationOpenedAt) {
+      user.notificationOpenedAt = notificationOpenedAt;
+    }
     user.save();
     console.log('send response user', user);
     response.status(200).json({
@@ -394,6 +401,7 @@ export const updateMe = async (request, response, next) => {
           name: user.name,
           email: user.email,
           avatar: user.avatar,
+          lastNotificationOpenedAt: user.lastNotificationOpenedAt,
         },
       },
     });
