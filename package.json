@@ -16,7 +16,10 @@
     "console": "node run console",
     "seed:clear": "env-cmd -f ./config/.env.dev node src/seeders/index.js clear",
     "seed:dev": "env-cmd -f ./config/.env.dev node src/seeders/index.js seed",
-    "seed:reset": "env-cmd -f ./config/.env.dev node src/seeders/index.js reset"
+    "seed:reset": "env-cmd -f ./config/.env.dev node src/seeders/index.js reset",
+    "migrate-create:dev": "env-cmd -f ./config/.env.dev npx migrate-mongo create add-new-field",
+    "migrate-up:dev": "env-cmd -f ./config/.env.dev npx migrate-mongo up",
+    "migrate-down:dev": "env-cmd -f ./config/.env.dev npx migrate-mongo down"
   },
   "type": "module",
   "keywords": [],

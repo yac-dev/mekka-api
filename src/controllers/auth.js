@@ -14,6 +14,7 @@ import fs from 'fs';
 import util from 'util';
 import AWS from 'aws-sdk';
 import { uploadContentToS3, deleteContentFromS3 } from '../services/s3.js';
+import Notification from '../models/notification.js';
 
 const deleteFromS3 = async (fileName) => {
   const params = {
@@ -132,6 +133,19 @@ export const signup = async (request, response, next) => {
 export const loadMe = async (request, response) => {
   const { user } = request;
   try {
+    const notificationOpenedAt = user.notificationOpenedAt;
+    let hasNewNotification = false;
+    if (!notificationOpenedAt) {
+      hasNewNotification = await Notification.exists({
+        to: user._id,
+      });
+    } else {
+      hasNewNotification = await Notification.exists({
+        to: user._id,
+        createdAt: { $gt: notificationOpenedAt },
+      });
+    }
+
     response.status(200).json({
       status: 'success',
       data: {
@@ -142,6 +156,8 @@ export const loadMe = async (request, response) => {
           avatar: user.avatar,
           pushToken: user.pushToken,
           createdAt: user.createdAt,
+          notificationOpenedAt: user.notificationOpenedAt,
+          hasNewNotification,
         },
       },
     });
@@ -362,8 +378,8 @@ export const requestResetPassword = async (request, response, next) => {
 // 基本全部送るようにしようかね。。。
 export const updateMe = async (request, response, next) => {
   try {
-    const { name, email, avatar } = request.body;
-    console.log('request.body', request.body);
+    const { name, email, notificationOpenedAt } = request.body;
+    console.log('update me 動いてる？', request.body);
     const user = await User.findById(request.params.userId);
     if (name) {
       user.name = name;
@@ -381,6 +397,9 @@ export const updateMe = async (request, response, next) => {
       await processAvatar(newAvatarFileName, { width: 500, height: 500 });
       user.avatar = `${process.env.CLOUDFRONT_URL}avatars/${newAvatarFileName}`;
     }
+    if (notificationOpenedAt) {
+      user.notificationOpenedAt = notificationOpenedAt;
+    }
     user.save();
     console.log('send response user', user);
     response.status(200).json({
@@ -390,6 +409,7 @@ export const updateMe = async (request, response, next) => {
           name: user.name,
           email: user.email,
           avatar: user.avatar,
+          notificationOpenedAt: user.notificationOpenedAt,
         },
       },
     });
