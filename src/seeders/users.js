@@ -9,6 +9,7 @@ const users = [
     password: 'testuser12',
     avatar: null,
     pushToken: '',
+    lastNotificationOpened: null,
   },
   {
     name: 'Jane Doe',
@@ -16,6 +17,7 @@ const users = [
     password: 'testuser12',
     avatar: null,
     pushToken: '',
+    lastNotificationOpened: null,
   },
   {
     name: 'John Smith',
@@ -23,6 +25,7 @@ const users = [
     password: 'testuser12',
     avatar: null,
     pushToken: '',
+    lastNotificationOpened: null,
   },
 ];
 
