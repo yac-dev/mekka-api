@@ -20,6 +20,7 @@
     "migrate-create:dev": "env-cmd -f ./config/.env.dev npx migrate-mongo create add-new-field",
     "migrate-up:dev": "env-cmd -f ./config/.env.dev npx migrate-mongo up"
   },
+  "type": "module",
   "keywords": [],
   "license": "ISC",
   "dependencies": {
