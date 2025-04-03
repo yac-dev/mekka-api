@@ -9,6 +9,7 @@ export const createPostNotification = async (request, response) => {
     post: postId,
     space: spaceId,
     createdBy,
+    createdAt: new Date(),
   });
 
   const populatedNotification = await Notification.populate(notification, [

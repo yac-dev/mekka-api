@@ -26,6 +26,7 @@ export const authorization = async (request, response, next) => {
     pushToken: true,
     avatar: true,
     createdAt: true,
+    notificationOpenedAt: true,
   });
 
   if (!user) {

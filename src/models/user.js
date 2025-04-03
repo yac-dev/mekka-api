@@ -36,6 +36,10 @@ const userSchema = mongoose.Schema({
     type: Date,
     default: new Date(),
   },
+  notificationOpenedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 // userSchema.set('toJSON', { virtuals: true });

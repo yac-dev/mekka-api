@@ -112,6 +112,7 @@ const processContent = async (contentObject) => {
     duration: contentObject.duration,
     createdBy: contentObject.userId,
     thumbnail: contentObject.type === 'video' ? `${process.env.CLOUDFRONT_URL}photos/${thumbnailFileName}` : null,
+    createdAt: new Date(),
   });
 
   if (contentObject.type === 'photo') {
@@ -163,6 +164,7 @@ export const createPost = async (request, response) => {
       location,
       disappearAt: type === 'moment' ? disappearAt : null,
       createdBy,
+      createdAt: new Date(),
     });
 
     const newPost = await Post.populate(post, {
@@ -929,6 +931,7 @@ export const getMomentPostsBySpaceId = async (request, response) => {
 //   }
 // };
 
+// spaceIdがいらないと思うのと、そもそもなんでreactions から取ってきているんだ？
 export const getReactionsByPostId = async (request, response) => {
   try {
     const { postId, spaceId } = request.params;

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-
+// const mongoose = require('mongoose');
 // あれだ。error handlingだな。やるべきは。。。あとは、authorization
 mongoose
   .connect(process.env.MONGODB_URL, {
