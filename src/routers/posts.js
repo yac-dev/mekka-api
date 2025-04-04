@@ -23,7 +23,7 @@ router.route('/moment').post(multerParser.array('bufferContents', 10), createMom
 router.route('/:postId').get(getPost);
 router.route('/:postId/comments').get(getCommentsByPostId);
 router.route('/:postId/reactions').post(createReaction);
-router.route('/:postId/reactions/:spaceId').get(getReactionsByPostId);
+router.route('/:postId/reactions/:spaceId').post(getReactionsByPostId);
 // router.route('/:postId/push-notifications').get(sendPostPushNotification);
 
 router.route('/tag/:tagId').get(getPostsByTagId);
