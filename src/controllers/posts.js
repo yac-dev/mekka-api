@@ -935,72 +935,46 @@ export const getMomentPostsBySpaceId = async (request, response) => {
 export const getReactionsByPostId = async (request, response) => {
   try {
     const { postId, spaceId } = request.params;
-    // const reactionsDocument = await Reaction.find({ space: spaceId }).populate({
-    //   path: 'sticker',
-    //   model: 'Sticker',
-    // });
-
-    // const reactions = await PostAndReactionAndUserRelationship.aggregate([
-    //   // aggregation pipelineでは、match stageでid比較したお場合は、monggose objectIdに変換せんといかんらしい。
-    //   { $match: { post: new mongoose.Types.ObjectId(postId) } },
-    //   // aggragation pipelineのgroupでは, _id nullだと全てをdocumentをcountするっぽい。
-    //   {
-    //     $group: {
-    //       _id: '$reaction',
-    //       count: { $sum: 1 },
-    //     },
-    //   },
-    //   // 上のarrayをさらにaggregationする。
+    const { userId } = request.body;
+    // const reactions = await Reaction.aggregate([
+    //   { $match: { space: new mongoose.Types.ObjectId(spaceId) } },
     //   {
     //     $lookup: {
-    //       from: 'reactions',
-    //       localField: '_id', //上でaggregationして得たのがlocalでそれをjoinしていく。それをreactionsという名前でoutputする。
-    //       foreignField: '_id',
-    //       as: 'reactionDetails',
+    //       from: 'postandreactionanduserrelationships',
+    //       let: { reactionId: '$_id' },
+    //       pipeline: [
+    //         { $match: { $expr: { $eq: ['$reaction', '$$reactionId'] } } },
+    //         { $match: { post: new mongoose.Types.ObjectId(postId) } },
+    //         { $group: { _id: '$reaction', count: { $sum: 1 } } },
+    //       ],
+    //       as: 'reactionCount',
     //     },
     //   },
-    //   // 上の結果arrayをdestructureしていく。
-    //   { $unwind: '$reactionDetails' },
     //   {
     //     $lookup: {
     //       from: 'stickers',
-    //       localField: 'reactionDetails.sticker',
+    //       localField: 'sticker',
     //       foreignField: '_id',
     //       as: 'stickerDetails',
     //     },
     //   },
+    //   { $unwind: { path: '$stickerDetails', preserveNullAndEmptyArrays: true } },
     //   {
-    //     $unwind: {
-    //       path: '$stickerDetails',
-    //       preserveNullAndEmptyArrays: true,
+    //     $addFields: {
+    //       count: { $arrayElemAt: ['$reactionCount.count', 0] },
     //     },
     //   },
     //   {
     //     $project: {
-    //       // _id: 0,
-    //       _id: '$reactionDetails._id',
-    //       type: '$reactionDetails.type',
-    //       emoji: '$reactionDetails.emoji',
+    //       _id: 1,
+    //       type: 1,
+    //       emoji: 1,
     //       sticker: '$stickerDetails',
-    //       caption: '$reactionDetails.caption',
-    //       count: '$count',
+    //       caption: 1,
+    //       count: { $ifNull: ['$count', 0] },
     //     },
     //   },
     // ]);
-
-    // const reactionDocumentsWithCount = reactionsDocument.map((reactionDoc) => {
-    //   const reactionWithCount = reactions.find((reaction) => reaction._id.toString() === reactionDoc._id.toString());
-    //   return {
-    //     ...reactionDoc.toObject(),
-    //     count: reactionWithCount ? reactionWithCount.count : 0,
-    //   };
-    // });
-
-    // response.status(200).json({
-    //   data: {
-    //     reactions: reactionDocumentsWithCount,
-    //   },
-    // });
     const reactions = await Reaction.aggregate([
       { $match: { space: new mongoose.Types.ObjectId(spaceId) } },
       {
@@ -1030,6 +1004,31 @@ export const getReactionsByPostId = async (request, response) => {
         },
       },
       {
+        $lookup: {
+          from: 'postandreactionanduserrelationships',
+          let: { reactionId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$reaction', '$$reactionId'] },
+                    { $eq: ['$user', new mongoose.Types.ObjectId(userId)] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: 'userReaction',
+        },
+      },
+      {
+        $addFields: {
+          reactedByCurrentUser: { $gt: [{ $size: '$userReaction' }, 0] },
+        },
+      },
+      {
         $project: {
           _id: 1,
           type: 1,
@@ -1037,6 +1036,7 @@ export const getReactionsByPostId = async (request, response) => {
           sticker: '$stickerDetails',
           caption: 1,
           count: { $ifNull: ['$count', 0] },
+          reactedByCurrentUser: 1,
         },
       },
     ]);
