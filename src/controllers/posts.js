@@ -150,6 +150,8 @@ export const createPost = async (request, response) => {
     const location = JSON.parse(locationJSON);
     const createdTagObjects = JSON.parse(createdTagsJSON);
 
+    // console.log('contentObjects', contentObjects);
+
     // creation 1: content documentを作る。
     const contentPromises = contentObjects.map((contentObject) => processContent(contentObject));
     const contentDocuments = await Promise.all(contentPromises);
