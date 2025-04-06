@@ -432,12 +432,71 @@ export const getPostsByTagIdAndRegion = async (request, response) => {
   try {
     const { tagId } = request.params;
     const { region } = request.body;
+    const now = new Date();
+
+    // TODOかもしれない
+    // if (!region) {
+    //   // If region is not provided, fetch documents with location sorted by createdAt
+    //   const posts = await PostAndTagRelationship.aggregate([
+    //     { $match: { tag: new mongoose.Types.ObjectId(tagId) } },
+    //     {
+    //       $lookup: {
+    //         from: 'posts',
+    //         localField: 'post',
+    //         foreignField: '_id',
+    //         as: 'post',
+    //       },
+    //     },
+    //     { $unwind: '$post' },
+    //     { $match: { 'post.location': { $ne: null } } }, // Ensure location is not null
+    //     {
+    //       $lookup: {
+    //         from: 'contents',
+    //         localField: 'post.contents',
+    //         foreignField: '_id',
+    //         as: 'post.contents',
+    //       },
+    //     },
+    //     {
+    //       $lookup: {
+    //         from: 'users',
+    //         localField: 'post.createdBy',
+    //         foreignField: '_id',
+    //         as: 'post.createdBy',
+    //       },
+    //     },
+    //     { $unwind: '$post.createdBy' },
+    //     {
+    //       $project: {
+    //         _id: '$post._id',
+    //         contents: '$post.contents',
+    //         type: '$post.type',
+    //         caption: '$post.caption',
+    //         createdAt: '$post.createdAt',
+    //         createdBy: {
+    //           _id: '$post.createdBy._id',
+    //           name: '$post.createdBy.name',
+    //           avatar: '$post.createdBy.avatar',
+    //         },
+    //         disappearAt: '$post.disappearAt',
+    //         location: '$post.location',
+    //       },
+    //     },
+    //     { $sort: { 'post.createdAt': -1 } }, // Sort by createdAt descending
+    //   ]);
+
+    //   return response.status(200).json({
+    //     data: {
+    //       posts,
+    //     },
+    //   });
+    // }
+
     const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
     const minLat = latitude - latitudeDelta / 2;
     const maxLat = latitude + latitudeDelta / 2;
     const minLng = longitude - longitudeDelta / 2;
     const maxLng = longitude + longitudeDelta / 2;
-    const now = new Date();
 
     // console.log('min lat -> ', minLat);
     // console.log('max lat -> ', maxLat);
@@ -993,6 +1052,18 @@ export const getReactionsByPostId = async (request, response) => {
       },
       {
         $lookup: {
+          from: 'postandreactionanduserrelationships',
+          let: { reactionId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$reaction', '$$reactionId'] } } },
+            { $match: { post: new mongoose.Types.ObjectId(postId), user: new mongoose.Types.ObjectId(userId) } },
+            { $limit: 1 }, // Limit to 1 to check if user has reacted
+          ],
+          as: 'userReaction',
+        },
+      },
+      {
+        $lookup: {
           from: 'stickers',
           localField: 'sticker',
           foreignField: '_id',
@@ -1003,31 +1074,7 @@ export const getReactionsByPostId = async (request, response) => {
       {
         $addFields: {
           count: { $arrayElemAt: ['$reactionCount.count', 0] },
-        },
-      },
-      {
-        $lookup: {
-          from: 'postandreactionanduserrelationships',
-          let: { reactionId: '$_id' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$reaction', '$$reactionId'] },
-                    { $eq: ['$user', new mongoose.Types.ObjectId(userId)] },
-                  ],
-                },
-              },
-            },
-            { $limit: 1 },
-          ],
-          as: 'userReaction',
-        },
-      },
-      {
-        $addFields: {
-          reactedByCurrentUser: { $gt: [{ $size: '$userReaction' }, 0] },
+          reactedByCurrentUser: { $gt: [{ $size: '$userReaction' }, 0] }, // Check if user has reacted
         },
       },
       {
