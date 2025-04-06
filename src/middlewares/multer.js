@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
   },
   // これ、uuidも必要だな。
   filename: function (request, file, callback) {
-    callback(null, file.originalname); //
+    callback(null, file.originalname);
   },
 });
 
