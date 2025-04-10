@@ -111,6 +111,7 @@ export const createSpace = async (request, response) => {
       totalPosts: 0,
       totalMembers: 1,
       rate: 0,
+      createdAt: new Date(),
     });
     if (contentType === 'video' || contentType === 'photoAndVideo') {
       space.videoLength = videoLength;
@@ -197,6 +198,8 @@ export const createSpace = async (request, response) => {
     const spaceAndUserRelationship = await SpaceAndUserRelationship.create({
       space: space._id,
       user: userData._id,
+      createdAt: new Date(),
+      lastCheckedIn: new Date(),
     });
     // const sharpedImageBinary = await sharpImage(contentObject.fileName);
     //     await uploadPhoto(contentObject.fileName, fileName, content.type, sharpedImageBinary);
@@ -209,7 +212,7 @@ export const createSpace = async (request, response) => {
     const tag = await Tag.create({
       iconType: 'icon',
       icon: hashTagIcon._id,
-      name: 'All',
+      name: 'General',
       color: colorOptios[Math.floor(Math.random() * colorOptios.length)],
       count: 1,
       space: space._id,
