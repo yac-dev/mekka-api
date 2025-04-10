@@ -8,10 +8,11 @@ import mongoose from 'mongoose';
 const tags = [
   {
     icon: '65bbaa7637c9fbbd20c15363',
-    name: 'All',
+    name: 'General',
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '6644b3bdfb287a658fac054a',
@@ -19,6 +20,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '6644b368fb287a658fac0548',
@@ -26,6 +28,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '6644b396fb287a658fac0549',
@@ -33,6 +36,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '66aa31cf529627a835f883ad',
@@ -40,6 +44,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '66aa3067529627a835f883a9',
@@ -47,6 +52,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '66aa3069529627a835f883aa',
@@ -54,6 +60,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '66aa31f6529627a835f883ae',
@@ -61,6 +68,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
   {
     icon: '6644b3e2fb287a658fac054b',
@@ -68,6 +76,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
+    type: ['photo', 'video'],
   },
 ];
 

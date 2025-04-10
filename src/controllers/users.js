@@ -258,6 +258,7 @@ export const getSpacesByUserId = async (request, response) => {
           },
           totalMembers: { $size: '$userDetails' },
           createdAt: '$spaceDetail.createdAt',
+          lastCheckedIn: '$lastCheckedIn',
         },
       },
     ]);
