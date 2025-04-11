@@ -26,6 +26,7 @@ export const createComment = async (request, response) => {
         space: post.space._id,
         comment: comment._id,
         createdBy: request.body.userId,
+        createdAt: new Date(),
       });
 
       const notificationData = {

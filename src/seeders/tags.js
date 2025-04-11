@@ -28,7 +28,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
-    type: ['photo', 'video'],
+    type: ['video'],
   },
   {
     icon: '6644b396fb287a658fac0549',
@@ -36,7 +36,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
-    type: ['photo', 'video'],
+    type: ['photo'],
   },
   {
     icon: '66aa31cf529627a835f883ad',
@@ -44,7 +44,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
-    type: ['photo', 'video'],
+    type: ['video'],
   },
   {
     icon: '66aa3067529627a835f883a9',
@@ -60,7 +60,7 @@ const tags = [
     color: '',
     space: null,
     createdBy: null,
-    type: ['photo', 'video'],
+    type: ['photo'],
   },
   {
     icon: '66aa31f6529627a835f883ae',
