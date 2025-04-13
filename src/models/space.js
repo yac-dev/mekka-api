@@ -47,7 +47,6 @@ const spaceSchema = mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now,
   },
   updatedAt: Date, //　こんな感じで行きたいわけで。。。
   // tags: [

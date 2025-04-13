@@ -16,6 +16,11 @@ const tagSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User',
   },
+  type: {
+    type: [String],
+    // enum: [['photo'], ['video'], ['photo', 'video']],
+    default: ['photo', 'video'],
+  },
   updatedAt: Date,
 });
 

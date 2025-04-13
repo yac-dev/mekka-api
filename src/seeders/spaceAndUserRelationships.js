@@ -16,6 +16,8 @@ export const seedSpaceAndUserRelationships = async () => {
         const relationship = new SpaceAndUserRelationship({
           user: user._id,
           space: space._id,
+          createdAt: new Date(),
+          lastCheckedIn: new Date(),
         });
         await relationship.save();
       }

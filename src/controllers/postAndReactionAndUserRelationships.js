@@ -101,6 +101,7 @@ export const createReaction = async (request, response) => {
       reaction: reactionId,
       createdBy: userId,
       isRead: false,
+      createdAt: new Date(),
     });
     // }
 
