@@ -32,7 +32,7 @@ jobs:
 
       - name: Login to DockerHub
         #  ってことは、事前にdocker hubにimageをあげておく必要があるのかね。。。？ -> NOTE:そう。
-        #基本はimageをhubにpushしておく必要がある。
+        #　基本localで作っておいたimageをhubにpushする必要がある。docker hub上で複製とかはできんから
         run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
       - name: Build Docker Image
         # ここtaggingしているんだね。image名をremote dockerhubに合わせるため。
