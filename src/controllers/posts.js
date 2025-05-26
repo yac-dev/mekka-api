@@ -18,6 +18,178 @@ import { PostAndReactionAndUserRelationship } from '../models/postAndReactionAnd
 import Reaction from '../models/reaction.js';
 import { colorOptios } from '../utils/colorOptions.js';
 import { Expo } from 'expo-server-sdk';
+import AWS from 'aws-sdk';
+
+//これを環境変数に応じて変えたいのと、fileの名前も動的に変えないといけない。
+// シンプルにvideosとthumbnailsのフォルダでいいと思う。
+
+const params = {
+  Queue: 'arn:aws:mediaconvert:us-east-2:711716982900:queues/Default',
+  UserMetadata: {
+    Customer: 'Amazon',
+  },
+  Role: 'arn:aws:iam::711716982900:role/service-role/MediaConvert-mekka_dev',
+  Settings: {
+    OutputGroups: [
+      {
+        Name: 'File Group',
+        OutputGroupSettings: {
+          Type: 'FILE_GROUP_SETTINGS',
+          FileGroupSettings: {
+            Destination: `s3://${process.env.AWS_S3_BUCKET_NAME}/videos/`,
+          },
+        },
+        Outputs: [
+          {
+            VideoDescription: {
+              ScalingBehavior: 'DEFAULT',
+              TimecodeInsertion: 'DISABLED',
+              AntiAlias: 'ENABLED',
+              Sharpness: 50,
+              Width: '1080',
+              Height: '1920',
+              CodecSettings: {
+                Codec: 'H_264',
+                H264Settings: {
+                  InterlaceMode: 'PROGRESSIVE',
+                  NumberReferenceFrames: 3,
+                  Syntax: 'DEFAULT',
+                  Softness: 0,
+                  GopClosedCadence: 1,
+                  GopSize: 90,
+                  Slices: 1,
+                  GopBReference: 'DISABLED',
+                  SlowPal: 'DISABLED',
+                  SpatialAdaptiveQuantization: 'ENABLED',
+                  TemporalAdaptiveQuantization: 'ENABLED',
+                  FlickerAdaptiveQuantization: 'DISABLED',
+                  EntropyEncoding: 'CABAC',
+                  Bitrate: 2000000, // Reduce bitrate
+                  FramerateNumerator: 30, // Reduce frame rate
+                  FramerateDenominator: 1,
+                  FramerateControl: 'SPECIFIED',
+                  RateControlMode: 'CBR',
+                  CodecProfile: 'MAIN',
+                  Telecine: 'NONE',
+                  MinIInterval: 0,
+                  AdaptiveQuantization: 'HIGH',
+                  CodecLevel: 'AUTO',
+                  FieldEncoding: 'PAFF',
+                  SceneChangeDetect: 'ENABLED',
+                  QualityTuningLevel: 'SINGLE_PASS',
+                  FramerateConversionAlgorithm: 'DUPLICATE_DROP',
+                  UnregisteredSeiTimecode: 'DISABLED',
+                  GopSizeUnits: 'FRAMES',
+                  ParControl: 'SPECIFIED',
+                  NumberBFramesBetweenReferenceFrames: 2,
+                  RepeatPps: 'DISABLED',
+                  ParNumerator: 1,
+                  ParDenominator: 1,
+                },
+              },
+              AfdSignaling: 'NONE',
+              DropFrameTimecode: 'ENABLED',
+              RespondToAfd: 'NONE',
+              ColorMetadata: 'INSERT',
+            },
+            AudioDescriptions: [
+              {
+                AudioTypeControl: 'FOLLOW_INPUT',
+                CodecSettings: {
+                  Codec: 'AAC',
+                  AacSettings: {
+                    AudioDescriptionBroadcasterMix: 'NORMAL',
+                    RateControlMode: 'CBR',
+                    CodecProfile: 'LC',
+                    CodingMode: 'CODING_MODE_2_0',
+                    RawFormat: 'NONE',
+                    SampleRate: 48000,
+                    Specification: 'MPEG4',
+                    Bitrate: 64000,
+                  },
+                },
+                LanguageCodeControl: 'FOLLOW_INPUT',
+                AudioSourceName: 'Audio Selector 1',
+              },
+            ],
+            ContainerSettings: {
+              Container: 'MP4',
+              Mp4Settings: {
+                CslgAtom: 'INCLUDE',
+                FreeSpaceBox: 'EXCLUDE',
+                MoovPlacement: 'PROGRESSIVE_DOWNLOAD',
+              },
+            },
+          },
+        ],
+      },
+      {
+        Name: 'Thumbnail Group',
+        OutputGroupSettings: {
+          Type: 'FILE_GROUP_SETTINGS',
+          FileGroupSettings: {
+            Destination: `s3://${process.env.AWS_S3_BUCKET_NAME}/thumbnails/`,
+          },
+        },
+        Outputs: [
+          {
+            ContainerSettings: {
+              Container: 'RAW',
+            },
+            VideoDescription: {
+              CodecSettings: {
+                Codec: 'FRAME_CAPTURE',
+                FrameCaptureSettings: {
+                  FramerateNumerator: 1,
+                  FramerateDenominator: 1,
+                  MaxCaptures: 1,
+                  Quality: 80,
+                },
+              },
+              Width: 1080, // Set desired width for the thumbnail
+              Height: 1920, // Set desired height for the thumbnail
+            },
+          },
+        ],
+      },
+    ],
+    AdAvailOffset: 0,
+    Inputs: [
+      {
+        AudioSelectors: {
+          'Audio Selector 1': {
+            Offset: 0,
+            DefaultSelection: 'NOT_DEFAULT',
+            ProgramSelection: 1,
+            SelectorType: 'TRACK',
+            Tracks: [1],
+          },
+        },
+        VideoSelector: {
+          ColorSpace: 'FOLLOW',
+        },
+        FilterEnable: 'AUTO',
+        PsiControl: 'USE_PSI',
+        FilterStrength: 0,
+        DeblockFilter: 'DISABLED',
+        DenoiseFilter: 'DISABLED',
+        TimecodeSource: 'EMBEDDED',
+        FileInput: `s3://${process.env.AWS_S3_BUCKET_NAME}/inputs/`, //note ここ、file名を入れるようにしないといかん
+      },
+      // s3に上げるときに、inputs/に入れるようにしないといかん 修正な
+    ],
+    TimecodeConfig: {
+      Source: 'EMBEDDED',
+    },
+  },
+};
+
+// note; file名を動的に変えられるようにfuntion作る
+
+AWS.config.update({ region: 'us-east-2' });
+// Set the custom endpoint for your account
+AWS.config.mediaconvert = { endpoint: 'https://mqm13wgra.mediaconvert.us-east-2.amazonaws.com' };
+
 const expo = new Expo();
 
 const unlinkFile = util.promisify(fs.unlink);
@@ -78,6 +250,18 @@ const optimizeVideoNew = (fileName) => {
 };
 // あとは、いままで保存された写真なりビデオのurlを変えないといかんのよね。こういう場合ってどうするんだろう。
 
+const transcodeVideos = async () => {
+  const endpointPromise = new AWS.MediaConvert({ apiVersion: '2017-08-29' }).createJob(params).promise();
+  endpointPromise.then(
+    function (data) {
+      console.log('Job created! ', data);
+    },
+    function (err) {
+      console.log('Error', err);
+    }
+  );
+};
+
 const processImage = async (fileName, resolution) => {
   // 1 imageを圧縮、
   const imageBinary = await optimizeImage(fileName, resolution);
@@ -87,6 +271,7 @@ const processImage = async (fileName, resolution) => {
   await removeFile(fileName);
 };
 
+// videoに関しては、もうvideoをs3にアプロードするだけジャマイカ？
 export const processVideo = async (originalFileName, thumbnailResolution) => {
   // 1 video圧縮 + thumbnail作成。
   const { thumbnailFileName, optimizedVideoFileName } = await optimizeVideoNew(originalFileName);
@@ -107,11 +292,11 @@ const processContent = async (contentObject) => {
   const thumbnailFileName = `${contentObject.fileName.split('.')[0]}_thumbnail.webp`;
 
   const content = await Content.create({
-    data: `${process.env.CLOUDFRONT_URL}${contentFolder}/${contentObject.fileName}`,
+    data: `${process.env.CLOUDFRONT_URL}/${contentFolder}/${contentObject.fileName}`,
     type: contentObject.type,
     duration: contentObject.duration,
     createdBy: contentObject.userId,
-    thumbnail: contentObject.type === 'video' ? `${process.env.CLOUDFRONT_URL}photos/${thumbnailFileName}` : null,
+    thumbnail: contentObject.type === 'video' ? `${process.env.CLOUDFRONT_URL}/photos/${thumbnailFileName}` : null,
     createdAt: new Date(),
   });
 
@@ -141,14 +326,20 @@ export const createPost = async (request, response) => {
     // --- validation ---
     const tagIds = JSON.parse(addedTagsJSON);
     const contentObjects = JSON.parse(contentsJSON);
-    if (!tagIds.length) {
-      throw new Error('Required to have at least one tag.');
-    }
+    // if (!tagIds.length) {
+    //   throw new Error('Required to have at least one tag.');
+    // }
     if (!contentObjects.length) {
       throw new Error('Required to have at least one content.');
     }
     const location = JSON.parse(locationJSON);
     const createdTagObjects = JSON.parse(createdTagsJSON);
+
+    console.log('created tag Objects', createdTagObjects);
+
+    if (!tagIds.length && !createdTagObjects.length) {
+      throw new Error('Required to have at least one tag.');
+    }
 
     // console.log('contentObjects', contentObjects);
 
