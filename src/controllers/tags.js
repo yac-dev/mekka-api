@@ -132,11 +132,60 @@ export const getPostsByTagId = async (request, response) => {
         },
       },
       {
+        $lookup: {
+          from: 'postandtagrelationships',
+          localField: 'postDetails._id',
+          foreignField: 'post',
+          as: 'postTags',
+        },
+      },
+      {
+        $lookup: {
+          from: 'tags',
+          localField: 'postTags.tag',
+          foreignField: '_id',
+          as: 'tags',
+        },
+      },
+      {
+        $lookup: {
+          from: 'icons',
+          localField: 'tags.icon',
+          foreignField: '_id',
+          as: 'tagIcons',
+        },
+      },
+      {
         $addFields: {
           totalComments: { $size: '$comments' },
           totalReactions: { $size: '$reactions' },
           contents: '$postContents',
           createdBy: { $arrayElemAt: ['$postCreator', 0] },
+          tags: {
+            $map: {
+              input: '$tags',
+              as: 'tag',
+              in: {
+                $mergeObjects: [
+                  '$$tag',
+                  {
+                    icon: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$tagIcons',
+                            as: 'icon',
+                            cond: { $eq: ['$$icon._id', '$$tag.icon'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
         },
       },
       {
@@ -151,6 +200,7 @@ export const getPostsByTagId = async (request, response) => {
           totalComments: 1,
           totalReactions: 1,
           location: '$postDetails.location',
+          tags: 1,
         },
       },
     ]);
