@@ -1,0 +1,55 @@
+name: Deploy Production App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # jobの名前必須な。
+  build:
+    environment: mekka_production
+    runs-on: ubuntu-latest
+    # actions
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+      - name: Create .env File
+        # ここでめっちゃ環境変数作ることになるね。
+        run: |
+          echo "AWS_S3_BUCKET_ACCESS_KEY=${{ secrets.AWS_S3_BUCKET_ACCESS_KEY }}" >> .env
+          echo "AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }}" >> .env
+          echo "AWS_S3_BUCKET_REGION=${{ secrets.AWS_S3_BUCKET_REGION }}" >> .env
+          echo "AWS_S3_BUCKET_SECRET_KEY=${{ secrets.AWS_S3_BUCKET_SECRET_KEY }}" >> .env
+          echo "CLOUDFRONT_URL=${{ secrets.CLOUDFRONT_URL }}" >> .env
+          echo "JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }}" >> .env
+          echo "MONGODB_URL=${{ secrets.MONGODB_URL }}" >> .env
+          echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+          echo "NODEMAILER_PASSWORD=${{ secrets.NODEMAILER_PASSWORD }}" >> .env
+          echo "NODEMAILER_USER=${{ secrets.NODEMAILER_USER }}" >> .env
+          echo "PORT=${{ secrets.PORT }}" >> .env
+          echo "REMOVEBG_API_KEY=${{ secrets.REMOVEBG_API_KEY }}" >> .env
+
+      - name: Login to DockerHub
+        #  ってことは、事前にdocker hubにimageをあげておく必要があるのかね。。。？ -> NOTE:そう。
+        #　基本localで作っておいたimageをhubにpushする必要がある。docker hub上で複製とかはできんから
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build Docker Image
+        # ここtaggingしているんだね。image名をremote dockerhubに合わせるため。
+        run: docker build -t yosukedev/mekka_production:latest .
+        # 基本、remoteのdockerhubのrepoの名前とlocal machine上のimage名が同じじゃないとpushできない。
+      - name: Publish Image to DockerHub
+        run: docker push yosukedev/mekka_production:latest
+
+  deploy:
+    needs: build # buildが終わってからdeployしたいわけよ。
+    runs-on: self-hosted # githubのmachineで動かしているわけではない。
+    # awsのinstanceにアクセスしている前提。
+    steps:
+      # 結局、build段階のものにアクセスするために、buildでpushしていたんだね。
+      - name: Pull Image from DockerHub
+        run: docker pull yosukedev/mekka_production:latest
+      - name: Delete Old Container
+        run: docker rm -f mekka_production_container
+      - name: Run Docker Container
+        run: docker run -d -p 3500:3500 --name mekka_production_container yosukedev/mekka_production
