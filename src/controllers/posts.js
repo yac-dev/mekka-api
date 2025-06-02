@@ -134,7 +134,7 @@ const params = {
         Outputs: [
           {
             ContainerSettings: {
-              Container: 'RAW',
+              Container: 'WEBP',
             },
             VideoDescription: {
               CodecSettings: {
@@ -146,8 +146,8 @@ const params = {
                   Quality: 80,
                 },
               },
-              Width: 1080, // Set desired width for the thumbnail
-              Height: 1920, // Set desired height for the thumbnail
+              Width: 540, // Set desired width for the thumbnail
+              Height: 960, // Set desired height for the thumbnail
             },
           },
         ],
@@ -379,8 +379,8 @@ const transcodeVideo = async (fileName) => {
                     Quality: 80,
                   },
                 },
-                Width: 1080, // Set desired width for the thumbnail
-                Height: 1920, // Set desired height for the thumbnail
+                Width: 540, // Set desired width for the thumbnail
+                Height: 960, // Set desired height for the thumbnail
               },
             },
           ],
