@@ -54,7 +54,6 @@ app.use('/api/postandreactionanduserrelationships', postAndReactionAndUserRelati
 app.use('/api/logs', logsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/followingrelationships', followingRelationshipsRouter);
-
 app.use(handleErrors);
 
 export default app;
