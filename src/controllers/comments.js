@@ -3,6 +3,7 @@ import Comment from '../models/comment.js';
 import Post from '../models/post.js';
 import Notification from '../models/notification.js';
 import { Expo } from 'expo-server-sdk';
+import mongoose from 'mongoose';
 const expo = new Expo();
 
 export const createComment = async (request, response) => {
@@ -88,12 +89,55 @@ export const getComments = async (request, response) => {
     console.log('postId', postId);
     const sortingCondition = { _id: -1 };
 
-    const comments = await Comment.find({ post: postId, createdBy: { $ne: null } })
-      .sort(sortingCondition)
-      .populate([
-        { path: 'createdBy', model: 'User' },
-        // { path: 'reply', model: 'Comment' },
-      ]);
+    const comments = await Comment.aggregate([
+      {
+        $match: {
+          post: mongoose.Types.ObjectId(postId),
+          createdBy: { $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: 'replies',
+          localField: '_id',
+          foreignField: 'comment',
+          as: 'replies',
+        },
+      },
+      {
+        $addFields: {
+          replyCount: { $size: '$replies' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          let: { userId: '$createdBy' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$_id', '$$userId'] },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                email: 1,
+                avatar: 1,
+              },
+            },
+          ],
+          as: 'createdBy',
+        },
+      },
+      {
+        $unwind: '$createdBy',
+      },
+      {
+        $sort: sortingCondition,
+      },
+    ]);
+
     console.log('comments', comments);
     response.status(200).json({
       data: {

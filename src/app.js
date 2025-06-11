@@ -24,6 +24,7 @@ import userAndReactionRelationshipsRouter from './routers/userAndReactionRelatio
 import spaceAndUserRelationshipsRouter from './routers/spaceAndUserRelationships.js';
 import postAndReactionAndUserRelationshipsRouter from './routers/postAndReactionAndUserRelationships.js';
 import followingRelationshipsRouter from './routers/followingRelationships.js';
+import repliesRouter from './routers/replies.js';
 import logsRouter from './routers/logs.js';
 import { handleErrors } from './controllers/errors.js';
 
@@ -54,6 +55,7 @@ app.use('/api/postandreactionanduserrelationships', postAndReactionAndUserRelati
 app.use('/api/logs', logsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/followingrelationships', followingRelationshipsRouter);
+app.use('/api/replies', repliesRouter);
 app.use(handleErrors);
 
 export default app;
