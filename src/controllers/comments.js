@@ -75,7 +75,14 @@ export const createComment = async (request, response) => {
 
     response.status(201).json({
       data: {
-        comment,
+        comment: {
+          _id: comment._id,
+          content: comment.content,
+          post: comment.post,
+          createdBy: comment.createdBy,
+          createdAt: comment.createdAt,
+          replyCount: 0,
+        },
       },
     });
   } catch (error) {
