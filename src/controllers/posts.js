@@ -134,7 +134,7 @@ const params = {
         Outputs: [
           {
             ContainerSettings: {
-              Container: 'RAW',
+              Container: 'WEBP',
             },
             VideoDescription: {
               CodecSettings: {
@@ -146,8 +146,8 @@ const params = {
                   Quality: 80,
                 },
               },
-              Width: 1080, // Set desired width for the thumbnail
-              Height: 1920, // Set desired height for the thumbnail
+              Width: 540, // Set desired width for the thumbnail
+              Height: 960, // Set desired height for the thumbnail
             },
           },
         ],
@@ -379,8 +379,8 @@ const transcodeVideo = async (fileName) => {
                     Quality: 80,
                   },
                 },
-                Width: 1080, // Set desired width for the thumbnail
-                Height: 1920, // Set desired height for the thumbnail
+                Width: 540, // Set desired width for the thumbnail
+                Height: 960, // Set desired height for the thumbnail
               },
             },
           ],
@@ -1298,12 +1298,70 @@ export const getPostsByLocationTagId = async (request, response) => {
 
 export const getCommentsByPostId = async (request, response) => {
   try {
-    const comments = await Comment.find({ post: request.params.postId }).populate([
-      { path: 'createdBy', model: 'User' },
-      { path: 'reply', model: 'Comment' },
-    ]);
-    console.log('comments here', comments);
+    const { postId } = request.params;
+    console.log('postId', postId);
+    const sortingCondition = { _id: -1 };
 
+    const comments = await Comment.aggregate([
+      {
+        $match: {
+          post: new mongoose.Types.ObjectId(postId),
+          createdBy: { $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: 'replies',
+          let: { commentId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$comment', '$$commentId'] },
+              },
+            },
+            {
+              $count: 'count',
+            },
+          ],
+          as: 'replyCount',
+        },
+      },
+      {
+        $addFields: {
+          replyCount: { $ifNull: [{ $arrayElemAt: ['$replyCount.count', 0] }, 0] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          let: { userId: '$createdBy' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$_id', '$$userId'] },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                email: 1,
+                avatar: 1,
+                name: 1,
+              },
+            },
+          ],
+          as: 'createdBy',
+        },
+      },
+      {
+        $unwind: '$createdBy',
+      },
+      {
+        $sort: sortingCondition,
+      },
+    ]);
+
+    console.log('comments', comments);
     response.status(200).json({
       data: {
         comments,
