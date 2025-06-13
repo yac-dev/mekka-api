@@ -94,7 +94,7 @@ export const getComments = async (request, response) => {
   try {
     const { postId } = request.params;
     console.log('postId', postId);
-    const sortingCondition = { _id: -1 };
+    // const sortingCondition = { _id: -1 };
 
     const comments = await Comment.aggregate([
       {
@@ -140,9 +140,9 @@ export const getComments = async (request, response) => {
       {
         $unwind: '$createdBy',
       },
-      {
-        $sort: sortingCondition,
-      },
+      // {
+      //   $sort: sortingCondition,
+      // },
     ]);
 
     console.log('comments', comments);
@@ -156,89 +156,96 @@ export const getComments = async (request, response) => {
   }
 };
 
-export const createReply = async (request, response, next) => {
-  try {
-    const { commentId, content, userId, userName, spaceId } = request.body;
-    const reply = await Reply.create({
-      comment: commentId,
-      content,
-      createdBy: userId,
-      createdAt: new Date(),
-    });
+// export const createReply = async (request, response, next) => {
+//   try {
+//     const { commentId, content, userId, userName, spaceId } = request.body;
+//     const reply = await Reply.create({
+//       comment: commentId,
+//       content,
+//       createdBy: userId,
+//       createdAt: new Date(),
+//     });
 
-    const comment = await Comment.findById(commentId).populate({
-      path: 'createdBy',
-    });
+//     const comment = await Comment.findById(commentId).populate({
+//       path: 'createdBy',
+//     });
 
-    if (comment.createdBy._id.toString() !== userId.toString()) {
-      const notification = await Notification.create({
-        to: comment.createdBy._id,
-        type: 'comment',
-        post: comment.post,
-        space: spaceId,
-        comment: comment._id,
-        createdBy: userId,
-        createdAt: new Date(),
-      });
+//     if (comment.createdBy._id.toString() !== userId.toString()) {
+//       const notification = await Notification.create({
+//         to: comment.createdBy._id,
+//         type: 'comment',
+//         post: comment.post,
+//         space: spaceId,
+//         comment: comment._id,
+//         createdBy: userId,
+//         createdAt: new Date(),
+//       });
 
-      const notificationData = {
-        type: 'comment',
-        postId: comment.post,
-        commentId: comment._id,
-      };
+//       const notificationData = {
+//         type: 'comment',
+//         postId: comment.post,
+//         commentId: comment._id,
+//       };
 
-      if (comment.createdBy.pushToken) {
-        console.log('token', comment.createdBy.pushToken);
-        if (!Expo.isExpoPushToken(comment.createdBy.pushToken)) {
-          console.error(`expo-push-token is not a valid Expo push token`);
-        }
-        const notifyMessage = {
-          to: comment.createdBy.pushToken,
-          sound: 'default',
-          data: notificationData,
-          title: `📨 ${userName} replied to your comment`,
-          body: content,
-        };
-        const messages = [];
-        messages.push(notifyMessage);
-        const chunks = expo.chunkPushNotifications(messages);
+//       if (comment.createdBy.pushToken) {
+//         console.log('token', comment.createdBy.pushToken);
+//         if (!Expo.isExpoPushToken(comment.createdBy.pushToken)) {
+//           console.error(`expo-push-token is not a valid Expo push token`);
+//         }
+//         const notifyMessage = {
+//           to: comment.createdBy.pushToken,
+//           sound: 'default',
+//           data: notificationData,
+//           title: `📨 ${userName} replied to your comment`,
+//           body: content,
+//         };
+//         const messages = [];
+//         messages.push(notifyMessage);
+//         const chunks = expo.chunkPushNotifications(messages);
 
-        const tickets = [];
+//         const tickets = [];
 
-        try {
-          (async () => {
-            for (const chunk of chunks) {
-              try {
-                const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-                tickets.push(...ticketChunk);
-                console.log('Push notifications sent:', ticketChunk);
-              } catch (error) {
-                console.error(error);
-              }
-            }
-          })();
-        } catch (error) {
-          console.error(error);
-        }
-      }
-    }
+//         try {
+//           (async () => {
+//             for (const chunk of chunks) {
+//               try {
+//                 const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+//                 tickets.push(...ticketChunk);
+//                 console.log('Push notifications sent:', ticketChunk);
+//               } catch (error) {
+//                 console.error(error);
+//               }
+//             }
+//           })();
+//         } catch (error) {
+//           console.error(error);
+//         }
+//       }
+//     }
 
-    response.status(201).json({
-      data: {
-        reply,
-      },
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
+//     response.status(201).json({
+//       data: {
+//         reply,
+//       },
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
 
 export const getReplies = async (request, response) => {
   try {
     const { commentId } = request.params;
-    const replies = await Reply.find({ comment: commentId }).populate({
-      path: 'createdBy',
-    });
+    const replies = await Reply.find({ comment: commentId }).populate([
+      {
+        path: 'createdBy',
+        select: '_id name avatar',
+      },
+      {
+        path: 'to',
+        select: '_id name avatar',
+      },
+    ]);
 
     response.status(200).json({
       data: {
