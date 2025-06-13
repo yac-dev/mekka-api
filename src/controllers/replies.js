@@ -6,11 +6,12 @@ const expo = new Expo();
 
 export const createReply = async (request, response, next) => {
   try {
-    const { commentId, content, userId } = request.body;
+    const { commentId, content, senderId, receiverId } = request.body;
     let reply = await Reply.create({
+      to: receiverId,
       comment: commentId,
       content,
-      createdBy: userId,
+      createdBy: senderId,
       createdAt: new Date(),
     });
     reply = await reply.populate([
@@ -26,16 +27,20 @@ export const createReply = async (request, response, next) => {
         path: 'createdBy',
         select: '_id name avatar pushToken',
       },
+      {
+        path: 'to',
+        select: '_id name avatar pushToken',
+      },
     ]);
 
-    if (reply.comment.createdBy._id.toString() !== userId.toString()) {
+    if (senderId.toString() !== receiverId.toString()) {
       const notification = await Notification.create({
-        to: reply.comment.createdBy._id,
+        to: receiverId,
         type: 'comment',
         post: reply.comment.post,
         space: reply.comment.post.space,
-        comment: reply.comment._id,
-        createdBy: userId,
+        comment: commentId,
+        createdBy: senderId,
         createdAt: new Date(),
       });
 
@@ -45,13 +50,13 @@ export const createReply = async (request, response, next) => {
         commentId: reply.comment._id,
       };
 
-      if (reply.comment.createdBy.pushToken) {
-        console.log('token', reply.comment.createdBy.pushToken);
-        if (!Expo.isExpoPushToken(reply.comment.createdBy.pushToken)) {
+      if (reply.to.pushToken) {
+        console.log('token', reply.to.pushToken);
+        if (!Expo.isExpoPushToken(reply.to.pushToken)) {
           console.error(`expo-push-token is not a valid Expo push token`);
         }
         const notifyMessage = {
-          to: reply.comment.createdBy.pushToken,
+          to: reply.to.pushToken,
           sound: 'default',
           data: notificationData,
           title: `📨 ${reply.createdBy.name} replied to your comment`,

@@ -1300,7 +1300,7 @@ export const getCommentsByPostId = async (request, response) => {
   try {
     const { postId } = request.params;
     console.log('postId', postId);
-    const sortingCondition = { _id: -1 };
+    // const sortingCondition = { _id: -1 };
 
     const comments = await Comment.aggregate([
       {
@@ -1356,9 +1356,9 @@ export const getCommentsByPostId = async (request, response) => {
       {
         $unwind: '$createdBy',
       },
-      {
-        $sort: sortingCondition,
-      },
+      // {
+      //   $sort: sortingCondition,
+      // },
     ]);
 
     console.log('comments', comments);
