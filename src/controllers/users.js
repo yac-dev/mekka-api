@@ -248,6 +248,8 @@ export const getSpacesByUserId = async (request, response) => {
           secretKey: '$spaceDetail.secretKey',
           isFollowAvailable: '$spaceDetail.isFollowAvailable',
           isPublic: '$spaceDetail.isPublic',
+          hours: '$spaceDetail.hours',
+          capacity: '$spaceDetail.capacity',
           reactions: 1,
           tags: 1,
           createdBy: {

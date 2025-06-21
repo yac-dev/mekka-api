@@ -82,8 +82,12 @@ export const createSpace = async (request, response) => {
       isFollowAvailable,
       reactions,
       createdBy,
+      hours,
+      capacity,
     } = request.body;
     console.log('this is the payload', request.body);
+
+    const hoursValue = JSON.parse(hours);
     const userData = JSON.parse(createdBy);
     const isPublicValue = JSON.parse(isPublic);
     const isCommentAvailableValue = JSON.parse(isCommentAvailable);
@@ -99,7 +103,7 @@ export const createSpace = async (request, response) => {
 
     const space = new Space({
       name,
-      icon: `${process.env.CLOUDFRONT_URL}icons/${request.file.filename}`,
+      icon: `${process.env.CLOUDFRONT_URL}/icons/${request.file.filename}`,
       contentType,
       description,
       secretKey: randomString,
@@ -108,10 +112,9 @@ export const createSpace = async (request, response) => {
       isReactionAvailable: isReactionAvailableValue,
       isFollowAvailable: isFollowAvailableValue,
       createdBy: new mongoose.Types.ObjectId(userData._id),
-      totalPosts: 0,
-      totalMembers: 1,
-      rate: 0,
       createdAt: new Date(),
+      hours: hoursValue,
+      capacity, // nullでいい。payloadであったらそのまま入れる。
     });
     if (contentType === 'video' || contentType === 'photoAndVideo') {
       space.videoLength = videoLength;
@@ -238,7 +241,8 @@ export const createSpace = async (request, response) => {
           reactions: space.isReactionAvailable ? reactionOptions : undefined,
           createdBy: userData,
           createdAt: space.createdAt,
-          rate: space.rate,
+          hours: space.hours,
+          capacity: space.capacity,
           tags: [
             {
               _id: tag._id,

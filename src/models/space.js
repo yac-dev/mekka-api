@@ -48,13 +48,72 @@ const spaceSchema = mongoose.Schema({
   createdAt: {
     type: Date,
   },
-  updatedAt: Date, //　こんな感じで行きたいわけで。。。
-  // tags: [
-  //   {
-  //     type: mongoose.Schema.ObjectId,
-  //     ref: 'Tag',
-  //   },
-  // ],
+  hours: {
+    from: {
+      type: String,
+      default: String, // 12am
+      enum: [
+        '12am',
+        '1am',
+        '2am',
+        '3am',
+        '4am',
+        '5am',
+        '6am',
+        '7am',
+        '8am',
+        '9am',
+        '10am',
+        '11am',
+        '12pm',
+        '1pm',
+        '2pm',
+        '3pm',
+        '4pm',
+        '5pm',
+        '6pm',
+        '7pm',
+        '8pm',
+        '9pm',
+        '10pm',
+        '11pm',
+      ],
+    },
+    to: {
+      type: String,
+      default: String, // 12pm 的な感じの値が入ることになる。まあここら辺の型を本来は制御した方がいいんだろうけど。。。
+      enum: [
+        '1am',
+        '2am',
+        '3am',
+        '4am',
+        '5am',
+        '6am',
+        '7am',
+        '8am',
+        '9am',
+        '10am',
+        '11am',
+        '12pm',
+        '1pm',
+        '2pm',
+        '3pm',
+        '4pm',
+        '5pm',
+        '6pm',
+        '7pm',
+        '8pm',
+        '9pm',
+        '10pm',
+        '11pm',
+        '12am',
+      ],
+    },
+  },
+  capacity: {
+    type: Number,
+  },
+  updatedAt: Date,
 });
 
 const Space = mongoose.model('Space', spaceSchema);
