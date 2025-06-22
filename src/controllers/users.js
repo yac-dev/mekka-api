@@ -119,8 +119,15 @@ export const getUsersByAddress = async (request, response) => {
 
 export const getSpacesByUserId = async (request, response) => {
   try {
+    const page = Number(request.query.page) || 0;
+    const limitPerPage = 20;
+    const sortingCondition = { lastCheckedIn: -1 };
+
     const spaces = await SpaceAndUserRelationship.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(request.params.userId) } },
+      { $sort: sortingCondition },
+      { $skip: page * limitPerPage },
+      { $limit: limitPerPage + 1 },
       {
         $lookup: {
           from: 'spaces',
@@ -265,9 +272,17 @@ export const getSpacesByUserId = async (request, response) => {
       },
     ]);
 
+    let hasNextPage = false;
+    if (spaces.length > limitPerPage) {
+      hasNextPage = true;
+      spaces.pop();
+    }
+
     response.status(200).json({
       data: {
         spaces,
+        currentPage: page + 1,
+        hasNextPage,
       },
     });
   } catch (error) {
@@ -398,10 +413,7 @@ export const getNotificationsByUserId = async (request, response) => {
     const sortingCondition = { _id: -1 };
 
     const notifications = await Notification.aggregate([
-      { $match: { to: new mongoose.Types.ObjectId(userId) } },
-      { $sort: sortingCondition },
-      { $skip: page * limitPerPage },
-      { $limit: limitPerPage },
+      { $match: { to: new mongoose.Types.ObjectId(userId), isRead: false } },
       {
         $lookup: {
           from: 'spaces',

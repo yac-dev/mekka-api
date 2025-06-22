@@ -286,29 +286,159 @@ export const createSpace = async (request, response) => {
 
 export const getSpaces = async (request, response) => {
   try {
-    const spaces = await Space.find({ isPublic: true })
-      .select({
-        _id: true,
-        name: true,
-        icon: true,
-        contentType: true,
-        disappearAfter: true,
-        videoLength: true,
-        isReactionAvailable: true,
-        description: true,
-        reactions: true,
-      })
-      .populate({
-        path: 'reactions',
-        model: 'Reaction',
-        populate: {
-          path: 'sticker',
-          model: 'Sticker',
+    const page = Number(request.query.page) || 0;
+    const limitPerPage = 20;
+    const sortingCondition = { createdAt: -1 };
+
+    const spaces = await Space.aggregate([
+      { $match: { isPublic: true } },
+      { $sort: sortingCondition },
+      { $skip: page * limitPerPage },
+      { $limit: limitPerPage + 1 },
+      {
+        $lookup: {
+          from: 'reactions',
+          localField: 'reactions',
+          foreignField: '_id',
+          as: 'reactions',
         },
-      });
+      },
+      {
+        $lookup: {
+          from: 'stickers',
+          localField: 'reactions.sticker',
+          foreignField: '_id',
+          as: 'stickerDetail',
+        },
+      },
+      {
+        $lookup: {
+          from: 'tags',
+          localField: '_id',
+          foreignField: 'space',
+          as: 'tags',
+        },
+      },
+      {
+        $lookup: {
+          from: 'icons',
+          localField: 'tags.icon',
+          foreignField: '_id',
+          as: 'iconDetail',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'createdByDetail',
+        },
+      },
+      { $unwind: { path: '$createdByDetail', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'spaceanduserrelationships',
+          localField: '_id',
+          foreignField: 'space',
+          as: 'userDetails',
+        },
+      },
+      {
+        $addFields: {
+          reactions: {
+            $map: {
+              input: '$reactions',
+              as: 'reaction',
+              in: {
+                $mergeObjects: [
+                  '$$reaction',
+                  {
+                    sticker: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$stickerDetail',
+                            as: 'sticker',
+                            cond: { $eq: ['$$sticker._id', '$$reaction.sticker'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          tags: {
+            $map: {
+              input: '$tags',
+              as: 'tag',
+              in: {
+                $mergeObjects: [
+                  '$$tag',
+                  {
+                    icon: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$iconDetail',
+                            as: 'icon',
+                            cond: { $eq: ['$$icon._id', '$$tag.icon'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          icon: 1,
+          contentType: 1,
+          isPublic: 1,
+          isCommentAvailable: 1,
+          isReactionAvailable: 1,
+          disappearAfter: 1,
+          description: 1,
+          videoLength: 1,
+          secretKey: 1,
+          isFollowAvailable: 1,
+          hours: 1,
+          capacity: 1,
+          reactions: 1,
+          tags: 1,
+          createdBy: {
+            _id: '$createdByDetail._id',
+            name: '$createdByDetail.name',
+            email: '$createdByDetail.email',
+            avatar: '$createdByDetail.avatar',
+          },
+          totalMembers: { $size: '$userDetails' },
+          createdAt: 1,
+        },
+      },
+    ]);
+
+    let hasNextPage = false;
+    if (spaces.length > limitPerPage) {
+      hasNextPage = true;
+      spaces.pop();
+    }
+
     response.status(200).json({
       data: {
         spaces,
+        currentPage: page + 1,
+        hasNextPage,
       },
     });
   } catch (error) {
@@ -318,33 +448,168 @@ export const getSpaces = async (request, response) => {
 
 export const getSpaceById = async (request, response) => {
   try {
-    const space = await Space.findById(request.params.spaceId)
-      .populate({
-        path: 'reactions',
-        model: 'Reaction',
-        populate: {
-          path: 'sticker',
-          model: 'Sticker',
+    const spaceId = new mongoose.Types.ObjectId(request.params.spaceId);
+
+    const spaceResult = await Space.aggregate([
+      { $match: { _id: spaceId } },
+      {
+        $lookup: {
+          from: 'reactions',
+          localField: 'reactions',
+          foreignField: '_id',
+          as: 'reactions',
         },
-      })
-      .populate({
-        path: 'createdBy',
-        model: 'User',
-        select: '_id name avatar',
-      });
-    const tagDocuments = await Tag.find({ space: space._id }).populate({
-      path: 'icon',
-      model: 'Icon',
-    });
+      },
+      {
+        $lookup: {
+          from: 'stickers',
+          localField: 'reactions.sticker',
+          foreignField: '_id',
+          as: 'stickerDetail',
+        },
+      },
+      {
+        $lookup: {
+          from: 'tags',
+          localField: '_id',
+          foreignField: 'space',
+          as: 'tags',
+        },
+      },
+      {
+        $lookup: {
+          from: 'icons',
+          localField: 'tags.icon',
+          foreignField: '_id',
+          as: 'iconDetail',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'createdByDetail',
+        },
+      },
+      { $unwind: { path: '$createdByDetail', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'spaceanduserrelationships',
+          localField: '_id',
+          foreignField: 'space',
+          as: 'members',
+        },
+      },
+      {
+        $lookup: {
+          from: 'posts',
+          let: { spaceId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ['$space', '$$spaceId'] }, { $ne: ['$createdBy', null] }],
+                },
+              },
+            },
+          ],
+          as: 'posts',
+        },
+      },
+      {
+        $addFields: {
+          reactions: {
+            $map: {
+              input: '$reactions',
+              as: 'reaction',
+              in: {
+                $mergeObjects: [
+                  '$$reaction',
+                  {
+                    sticker: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$stickerDetail',
+                            as: 'sticker',
+                            cond: { $eq: ['$$sticker._id', '$$reaction.sticker'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          tags: {
+            $map: {
+              input: '$tags',
+              as: 'tag',
+              in: {
+                $mergeObjects: [
+                  '$$tag',
+                  {
+                    icon: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$iconDetail',
+                            as: 'icon',
+                            cond: { $eq: ['$$icon._id', '$$tag.icon'] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          icon: 1,
+          contentType: 1,
+          isPublic: 1,
+          isCommentAvailable: 1,
+          isReactionAvailable: 1,
+          disappearAfter: 1,
+          description: 1,
+          videoLength: 1,
+          secretKey: 1,
+          isFollowAvailable: 1,
+          hours: 1,
+          capacity: 1,
+          reactions: 1,
+          tags: 1,
+          createdBy: {
+            _id: '$createdByDetail._id',
+            name: '$createdByDetail.name',
+            avatar: '$createdByDetail.avatar',
+          },
+          totalMembers: { $size: '$members' },
+          totalPosts: { $size: '$posts' },
+          createdAt: 1,
+        },
+      },
+    ]);
 
-    const plainSpaceObject = space.toObject();
-    plainSpaceObject.tags = tagDocuments;
+    if (!spaceResult || spaceResult.length === 0) {
+      return response.status(404).json({ message: 'Space not found' });
+    }
 
-    console.log('plainSpaceObject', plainSpaceObject);
+    const space = spaceResult[0];
 
     response.status(200).json({
       data: {
-        space: plainSpaceObject,
+        space,
       },
     });
   } catch (error) {
